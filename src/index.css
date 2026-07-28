@@ -189,8 +189,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+body, input, textarea, button, select {
+  font-family: var(--app-font-family, 'Inter', sans-serif);
+}
+
 body {
-  font-family: 'Inter', sans-serif;
   background: var(--bg-0);
   color: var(--text-0);
   height: 100vh;

@@ -22,6 +22,9 @@ export interface ChatRoom {
   unread?: number;
   pinned?: boolean;
   muted?: boolean;
+  archived?: boolean;
+  archivedPinned?: boolean;
+  isUnknownSender?: boolean;
   last: string;
   time?: string;
   members?: number;
@@ -67,18 +70,67 @@ export interface ChatMessage {
 export interface MailItem {
   id: string;
   from: string;
+  avatar?: string;
   subject: string;
   snippet: string;
   time: string;
   unread: boolean;
 }
 
+export interface StatusMusicTrack {
+  id: string;
+  title: string;
+  artist: string;
+  coverUrl?: string;
+  audioPreviewUrl?: string;
+  startTime?: number; // start second (0 to 45s)
+  duration?: number; // e.g. 15s
+  layoutStyle?: 'vinyl' | 'cassette' | 'card' | 'lyrics';
+}
+
+export interface StatusSticker {
+  id: string;
+  type: 'location' | 'timestamp' | 'emoji';
+  content: string;
+  x: number; // percentage 0-100
+  y: number; // percentage 0-100
+}
+
+export interface StatusViewerRecord {
+  id: string;
+  name: string;
+  avatar?: string;
+  time: string;
+}
+
+export interface StatusItem {
+  id: string;
+  type: 'image' | 'video' | 'text';
+  mediaUrl?: string;
+  caption?: string;
+  textOverlay?: string;
+  textColor?: string;
+  bgColor?: string;
+  fontStyle?: 'sans' | 'serif' | 'handwritten' | 'bold' | 'monospace';
+  filter?: 'none' | 'pop' | 'bw' | 'cool' | 'warm';
+  isMuted?: boolean;
+  doodles?: { points: { x: number; y: number }[]; color: string }[];
+  stickers?: StatusSticker[];
+  music?: StatusMusicTrack;
+  privacy?: 'contacts' | 'contacts_except' | 'only_share';
+  createdAt: string;
+  viewers?: StatusViewerRecord[];
+}
+
 export interface Story {
-  id: number;
+  id: string | number;
+  userId?: string;
   name: string;
   avatar: string;
   seen: boolean;
   mine?: boolean;
+  timeAgo?: string;
+  items?: StatusItem[];
 }
 
 export interface AvatarItem {
@@ -100,9 +152,15 @@ export interface UserProfile {
   avatars: AvatarItem[];
   activeAvatarId: string;
   publicAvatarId?: string;
+  photoPrivacy?: 'everyone' | 'contacts' | 'contacts_except' | 'nobody';
+  allowPhotoDownloads?: boolean;
 }
 
 export interface AdvancedSettingsState {
+  // Archive & Privacy Settings
+  autoArchiveUnknown: boolean;
+  groupIconEditPermission: 'all' | 'admins';
+  blockedContactsCount: number;
   // Data & Automatic Media Downloads
   autoDownloadPrivate: boolean;
   autoDownloadGroups: boolean;
@@ -133,6 +191,9 @@ export interface AdvancedSettingsState {
   interfaceScale: number; // 100 to 150
   hardwareAccel: boolean;
   reduceAnimations: boolean;
+  // Font & Typography Customization
+  selectedFontId?: string;
+  fontFamily?: string;
   // Translation & Language Settings
   interfaceLanguage: string;
   targetLanguage: string;

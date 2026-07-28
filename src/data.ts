@@ -17,92 +17,210 @@ export function getPaletteGrad(i: number): string {
 }
 
 export const INITIAL_CHATS: ChatRoom[] = [
-  { id: 'c1', name: 'Amara Osei', avatar: getPaletteGrad(0), online: true, unread: 2, pinned: true, muted: false, last: 'Sent the files, check inbox', time: '09:41' },
-  { id: 'c2', name: 'Diego Ferreira', avatar: getPaletteGrad(1), online: false, unread: 0, pinned: false, muted: true, last: '🎤 Voice message', time: '08:12' },
-  { id: 'c3', name: 'Priya Chandran', avatar: getPaletteGrad(2), online: true, unread: 0, pinned: false, muted: false, last: 'That sketch looks great!', time: 'Yesterday' },
-  { id: 'c4', name: 'Noah Bergström', avatar: getPaletteGrad(3), online: false, unread: 5, pinned: false, muted: false, last: '📍 Live location shared', time: 'Yesterday' },
-  { id: 'c5', name: 'Yuki Tanaka', avatar: getPaletteGrad(4), online: true, unread: 0, pinned: false, muted: false, last: 'Poll: pick the launch date', time: 'Mon' },
+  { id: 'c1', name: 'Kato Mukasa', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=75', online: true, unread: 2, pinned: true, muted: false, last: 'Oli otya! Sent the files, check inbox', time: '09:41' },
+  { id: 'c2', name: 'Babirye Kintu', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=120&q=75', online: false, unread: 0, pinned: false, muted: true, last: '🎤 Voice message (0:42) - Ki gano Mukwano!', time: '08:12' },
+  { id: 'c3', name: 'Ssemwanga Ronald', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'That sketch of the Buganda motif looks great!', time: 'Yesterday' },
+  { id: 'c4', name: 'Namubiru Sarah', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=75', online: false, unread: 5, pinned: false, muted: false, last: '📍 Live location shared · Kampala Road', time: 'Yesterday' },
+  { id: 'c5', name: 'Kizza Aloysius', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'Poll: Pick the launch date for Kampala App', time: 'Mon' },
 ];
 
 export const INITIAL_GROUPS: ChatRoom[] = [
-  { id: 'g1', name: 'Design Guild', avatar: getPaletteGrad(5), members: 128, unread: 12, last: 'Priya: updated the tokens doc' },
-  { id: 'g2', name: 'Weekend Hikers', avatar: getPaletteGrad(6), members: 34, unread: 0, last: 'Diego: 6am at the trailhead' },
-  { id: 'g3', name: 'NEXA Beta Testers', avatar: getPaletteGrad(7), members: 812, unread: 3, last: 'Admin: v2.6 notes pinned' },
+  { id: 'g1', name: 'Kampala Tech Hub 🇺🇬', avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=120&q=75', members: 128, unread: 12, last: 'Kato: Updated the brand tokens doc for our app.' },
+  { id: 'g2', name: 'Buganda Royal Fraternity 👑', avatar: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=120&q=75', members: 45, unread: 0, last: 'Ssemwanga: Meeting tomorrow at Bulange Mengo at 9:00 AM.' },
+  { id: 'g3', name: 'Clan Elders Forum 🌿', avatar: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=120&q=75', members: 320, unread: 3, last: 'Sekatte: Traditional customs handbook pinned above.' },
 ];
 
 export const INITIAL_CHANNELS: ChatRoom[] = [
-  { id: 'ch1', name: 'Product Updates', avatar: getPaletteGrad(2), type: 'Public', subs: '44.2k', last: 'New: scheduled messages rolling out' },
-  { id: 'ch2', name: 'Design Notes', avatar: getPaletteGrad(4), type: 'Public', subs: '9.8k', last: 'On bubble radius and rhythm' },
-  { id: 'ch3', name: 'Internal Roadmap', avatar: getPaletteGrad(6), type: 'Private', subs: '56', last: 'Q3 milestones attached' },
+  { id: 'ch1', name: 'Uganda Tech News 📰', avatar: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=120&q=75', type: 'Public', subs: '44.2k', last: 'New: Mobile money integrations rolling out across East Africa.' },
+  { id: 'ch2', name: 'Buganda Heritage & Arts 🎨', avatar: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=120&q=75', type: 'Public', subs: '9.8k', last: 'On traditional Lubugo barkcloth weaving and design rhythm.' },
+  { id: 'ch3', name: 'Kampala Developers Network 💻', avatar: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=120&q=75', type: 'Private', subs: '1.2k', last: 'Q3 Kampala Hackathon milestones attached.' },
 ];
 
 export const INITIAL_COMMUNITIES: ChatRoom[] = [
-  { id: 'co1', name: 'NEXA Builders', avatar: getPaletteGrad(1), groups: 6, channels: 3, desc: 'Everything about building on the platform.', last: '' },
-  { id: 'co2', name: 'City Creatives', avatar: getPaletteGrad(3), groups: 11, channels: 2, desc: 'Local artists, makers & meetups.', last: '' },
+  { id: 'co1', name: 'Buganda Innovation Hub', avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=120&q=75', groups: 6, channels: 3, desc: 'Empowering tech entrepreneurs across Buganda & Uganda.', last: '' },
+  { id: 'co2', name: 'Kampala Creatives & Artists', avatar: 'https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=120&q=75', groups: 11, channels: 2, desc: 'Local Baganda artists, musicians, designers & meetups.', last: '' },
 ];
 
 export const INITIAL_MAIL: Record<string, MailItem[]> = {
   inbox: [
-    { id: 'm1', from: 'Amara Osei', subject: 'Q3 deck — final review', snippet: 'Left a couple comments on slide 4, otherwise ready to send.', time: '09:12', unread: true },
-    { id: 'm2', from: 'NEXA Team', subject: 'Your weekly summary', snippet: 'You sent 214 messages and joined 2 new communities.', time: 'Yesterday', unread: false },
-    { id: 'm3', from: 'Noah Bergström', subject: 'Invoice #2291', snippet: 'Attached is the invoice for last month.', time: 'Mon', unread: true },
+    { id: 'm1', from: 'Kato Mukasa', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=75', subject: 'Kampala App deck — final review', snippet: 'Webale nnyo! Left a couple comments on slide 4, ready for launch.', time: '09:12', unread: true },
+    { id: 'm2', from: 'Buganda Tech Guild', avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=120&q=75', subject: 'Your weekly activity summary', snippet: 'You sent 214 messages and joined 2 new communities in Kampala.', time: 'Yesterday', unread: false },
+    { id: 'm3', from: 'Namubiru Sarah', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=75', subject: 'Invoice #2291 - Kampala Hub', snippet: 'Attached is the invoice for last month development.', time: 'Mon', unread: true },
   ],
-  sent: [{ id: 's1', from: 'To: Priya Chandran', subject: 'Re: sketch feedback', snippet: 'Love the direction, ship it.', time: 'Tue', unread: false }],
-  drafts: [{ id: 'd1', from: 'To: Design Guild', subject: 'Meeting notes', snippet: 'Draft — untitled body text...', time: '', unread: false }],
+  sent: [{ id: 's1', from: 'To: Ssemwanga Ronald', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=75', subject: 'Re: Buganda design feedback', snippet: 'Love the cultural motif direction, ship it.', time: 'Tue', unread: false }],
+  drafts: [{ id: 'd1', from: 'To: Kampala Tech Hub', avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=120&q=75', subject: 'Meeting notes', snippet: 'Draft — untitled body text...', time: '', unread: false }],
   spam: [],
   trash: []
 };
 
 export const INITIAL_STORIES: Story[] = [
-  { id: 1, name: 'Your Story', avatar: getPaletteGrad(0), seen: false, mine: true },
-  { id: 2, name: 'Amara', avatar: getPaletteGrad(0), seen: false },
-  { id: 3, name: 'Diego', avatar: getPaletteGrad(1), seen: false },
-  { id: 4, name: 'Priya', avatar: getPaletteGrad(2), seen: true },
-  { id: 5, name: 'Noah', avatar: getPaletteGrad(3), seen: true },
+  {
+    id: 1,
+    userId: 'c0',
+    name: 'Your Story',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=75',
+    seen: false,
+    mine: true,
+    timeAgo: 'Just now',
+    items: [
+      {
+        id: 'st-me-1',
+        type: 'text',
+        caption: 'Working on the new Kampala Tech App launch! 🚀',
+        textOverlay: 'Oli Otya Kampala! 🇺🇬',
+        bgColor: 'linear-gradient(135deg, #00A884, #005C4B)',
+        textColor: '#ffffff',
+        fontStyle: 'bold',
+        createdAt: '10m ago',
+        stickers: [
+          { id: 's1', type: 'location', content: 'Kampala, Uganda 📍', x: 25, y: 70 },
+          { id: 's2', type: 'timestamp', content: '10:45 AM 🕒', x: 70, y: 70 },
+        ],
+        music: {
+          id: 'm1',
+          title: 'Sitya Loss',
+          artist: 'Eddy Kenzo',
+          coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=120&q=75',
+          layoutStyle: 'vinyl',
+        },
+        viewers: [
+          { id: 'v1', name: 'Kato Mukasa', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=75', time: '5m ago' },
+          { id: 'v2', name: 'Babirye Kintu', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=120&q=75', time: '8m ago' },
+        ],
+      }
+    ]
+  },
+  {
+    id: 2,
+    userId: 'c1',
+    name: 'Kato',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=75',
+    seen: false,
+    timeAgo: '25m ago',
+    items: [
+      {
+        id: 'st-kato-1',
+        type: 'image',
+        mediaUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80',
+        caption: 'Morning sunrise over Lake Victoria ☀️',
+        filter: 'pop',
+        createdAt: '25m ago',
+        stickers: [
+          { id: 'sk1', type: 'location', content: 'Lake Victoria, Entebbe 📍', x: 50, y: 80 }
+        ],
+        music: {
+          id: 'm2',
+          title: 'Malaika',
+          artist: 'Uganda Harmony Folk',
+          layoutStyle: 'card',
+        }
+      }
+    ]
+  },
+  {
+    id: 3,
+    userId: 'c2',
+    name: 'Babirye',
+    avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=120&q=75',
+    seen: false,
+    timeAgo: '1h ago',
+    items: [
+      {
+        id: 'st-bab-1',
+        type: 'image',
+        mediaUrl: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80',
+        caption: 'Crafting custom Lubugo barkcloth designs today 🎨',
+        createdAt: '1h ago',
+        music: {
+          id: 'm3',
+          title: 'Buganda Royal Beats',
+          artist: 'Kadongo Kamu Ensemble',
+          layoutStyle: 'cassette',
+        }
+      }
+    ]
+  },
+  {
+    id: 4,
+    userId: 'c3',
+    name: 'Ssemwanga',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=75',
+    seen: true,
+    timeAgo: '3h ago',
+    items: [
+      {
+        id: 'st-ssem-1',
+        type: 'text',
+        caption: 'Traditional Buganda architecture research session',
+        textOverlay: 'Bulange Mengo 🏛️',
+        bgColor: 'linear-gradient(135deg, #4A154B, #111A24)',
+        textColor: '#FFD700',
+        fontStyle: 'serif',
+        createdAt: '3h ago'
+      }
+    ]
+  },
+  {
+    id: 5,
+    userId: 'c4',
+    name: 'Namubiru',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=75',
+    seen: true,
+    timeAgo: '5h ago',
+    items: [
+      {
+        id: 'st-nam-1',
+        type: 'image',
+        mediaUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80',
+        caption: 'Tech meetup at Mengo Innovation Center 💻',
+        createdAt: '5h ago'
+      }
+    ]
+  },
 ];
 
 export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
   c1: [
-    { from: 'them', type: 'text', text: 'Morning! Quick one before the call.', time: '09:10' },
-    { from: 'them', type: 'text', text: 'Can you send over the updated brand tokens?', time: '09:11' },
+    { from: 'them', type: 'text', text: 'Oli otya bro! Quick one before the team call.', time: '09:10' },
+    { from: 'them', type: 'text', text: 'Can you send over the updated Kampala App tokens?', time: '09:11' },
     { from: 'me', type: 'text', text: 'On it — pulling the latest export now.', time: '09:20', status: 'read' },
-    { from: 'me', type: 'doc', name: 'brand-tokens-v3.pdf', size: '2.1 MB', time: '09:24', status: 'read' },
+    { from: 'me', type: 'doc', name: 'kampala-brand-tokens-v3.pdf', size: '2.1 MB', time: '09:24', status: 'read' },
     { from: 'them', type: 'sticker', emoji: '🎉', time: '09:25' },
     { from: 'them', type: 'voice', dur: '0:18', time: '09:31' },
-    { from: 'me', type: 'text', text: 'Sent the files, check inbox', time: '09:41', status: 'delivered' },
+    { from: 'me', type: 'text', text: 'Oli otya! Sent the files, check inbox', time: '09:41', status: 'delivered' },
   ],
   c2: [
     { from: 'them', type: 'voice', dur: '0:42', time: '08:12' },
-    { from: 'me', type: 'text', text: 'Nice, transcribing this later 😄', time: '08:14', status: 'read' },
+    { from: 'me', type: 'text', text: 'Webale nnyo, transcribing this later 😄', time: '08:14', status: 'read' },
   ],
   c3: [
     { from: 'me', type: 'sketch', time: 'Yesterday', status: 'read' },
-    { from: 'them', type: 'text', text: 'That sketch looks great!', time: 'Yesterday', reactions: ['❤️'] },
+    { from: 'them', type: 'text', text: 'That sketch of the Buganda motif looks great!', time: 'Yesterday', reactions: ['❤️'] },
   ],
   c4: [
-    { from: 'them', type: 'location', label: 'Live Location · Central Park', time: 'Yesterday' },
-    { from: 'me', type: 'text', text: 'On my way, 10 mins', time: 'Yesterday', status: 'read' },
+    { from: 'them', type: 'location', label: 'Live Location · Kampala Road', time: 'Yesterday' },
+    { from: 'me', type: 'text', text: 'On my way to Mengo, 10 mins', time: 'Yesterday', status: 'read' },
   ],
   c5: [
-    { from: 'them', type: 'poll', question: 'Pick the launch date', options: [['Sept 12', 62], ['Sept 19', 38]], time: 'Mon' },
+    { from: 'them', type: 'poll', question: 'Pick the launch date for Kampala App', options: [['Sept 12', 62], ['Sept 19', 38]], time: 'Mon' },
   ],
   g1: [
-    { from: 'them', name: 'Priya', avatar: getPaletteGrad(2), type: 'text', text: 'Updated the tokens doc, ready for review.', time: '11:02' },
-    { from: 'them', name: 'Marco', avatar: getPaletteGrad(6), type: 'contact', cname: 'Studio Print Shop', cphone: '+1 555 0148', time: '11:05' },
+    { from: 'them', name: 'Ssemwanga', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=250&q=80', type: 'text', text: 'Updated the tokens doc for Kampala Hub, ready for review.', time: '11:02' },
+    { from: 'them', name: 'Nakyagaba Grace', avatar: 'https://images.unsplash.com/photo-1589156280159-27698a70f29e?auto=format&fit=crop&w=250&q=80', type: 'contact', cname: 'Kampala Tech Print Shop', cphone: '+256 701 555014', time: '11:05' },
   ],
-  g2: [{ from: 'them', name: 'Diego', avatar: getPaletteGrad(1), type: 'text', text: '6am at the trailhead, bring layers.', time: '07:40' }],
-  g3: [{ from: 'them', name: 'Admin', avatar: getPaletteGrad(7), type: 'text', text: 'v2.6 notes pinned above 📌', time: '10:00' }],
-  ch1: [{ from: 'them', name: 'Product Updates', avatar: getPaletteGrad(2), type: 'text', text: 'New: scheduled messages rolling out to beta users this week.', time: 'Today' }],
-  ch2: [{ from: 'them', name: 'Design Notes', avatar: getPaletteGrad(4), type: 'text', text: 'On bubble radius and rhythm — why 16px felt right here.', time: 'Today' }],
-  ch3: [{ from: 'them', avatar: getPaletteGrad(6), type: 'doc', name: 'q3-roadmap.pdf', size: '640 KB', time: 'Today' }],
+  g2: [{ from: 'them', name: 'Ssemwanga', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=250&q=80', type: 'text', text: 'Meeting tomorrow at Bulange Mengo at 9:00 AM.', time: '07:40' }],
+  g3: [{ from: 'them', name: 'Sekatte', avatar: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=250&q=80', type: 'text', text: 'Traditional customs handbook pinned above 📌', time: '10:00' }],
+  ch1: [{ from: 'them', name: 'Uganda Tech News', avatar: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=250&q=80', type: 'text', text: 'New: Mobile money integrations rolling out across East Africa.', time: 'Today' }],
+  ch2: [{ from: 'them', name: 'Buganda Heritage & Arts', avatar: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=250&q=80', type: 'text', text: 'On traditional Lubugo barkcloth weaving and design rhythm.', time: 'Today' }],
+  ch3: [{ from: 'them', avatar: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=250&q=80', type: 'doc', name: 'kampala-q3-roadmap.pdf', size: '640 KB', time: 'Today' }],
 };
 
 export const AUTO_REPLIES = [
-  'Got it 👍',
-  'Sounds good, talking soon.',
-  'Ha, exactly.',
-  'Let me check and get back to you.',
-  'Perfect, thank you!'
+  'Oli otya! Got it 👍',
+  'Webale nnyo! Sounds good, talking soon.',
+  'Ha, exactly! Mukwano.',
+  'Let me check with the Kampala team and get back to you.',
+  'Perfect, thank you! Kulika.'
 ];
 
 export const WHATSAPP_THEMES: WhatsAppTheme[] = [

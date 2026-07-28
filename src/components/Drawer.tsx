@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChatRoom, UserProfile, AdvancedSettingsState, AvatarItem, ThemeOption } from '../types';
 import { THEMES, ACCENTS } from '../data';
+import { FONT_CATALOG } from '../data/fontsCatalog';
 import { SUPPORTED_LANGUAGES, getUIText } from '../services/translator';
 import { ProfilePicturePickerModal, ProfilePictureSelection } from './ProfilePicturePickerModal';
 
@@ -25,6 +26,8 @@ interface DrawerProps {
   onToggleChange: (key: string, val: boolean) => void;
   onRadioChange: (key: string, idx: number) => void;
   onToast: (msg: string) => void;
+  onOpenFontSelector?: () => void;
+  onOpenFullScreenDp?: (target: { name: string; avatar?: string }) => void;
 }
 
 function initials(name: string): string {
@@ -59,6 +62,8 @@ export const Drawer: React.FC<DrawerProps> = ({
   onToggleChange,
   onRadioChange,
   onToast,
+  onOpenFontSelector,
+  onOpenFullScreenDp,
 }) => {
   const [settingsStack, setSettingsStack] = useState<string[]>(['home']);
   const [activeAvatarIdx, setActiveAvatarIdx] = useState<number>(0);
@@ -185,17 +190,11 @@ export const Drawer: React.FC<DrawerProps> = ({
       url: selection.url,
       createdAt: 'Just now',
     };
-    const updatedList = [newAv, ...avatars];
-    onUpdateProfile({ avatars: updatedList, activeAvatarId: newAv.id });
+    // WhatsApp style DP: single active profile photo
+    onUpdateProfile({ avatars: [newAv], activeAvatarId: newAv.id });
     setActiveAvatarIdx(0);
     setIsPickerModalOpen(false);
-    onToast(
-      selection.source === 'unsplash'
-        ? 'Unsplash photo set as profile picture!'
-        : selection.source === 'upload'
-        ? 'Uploaded file set as profile picture!'
-        : 'Applied vector avatar!'
-    );
+    onToast('Profile picture updated!');
   };
 
   const handleSetMainAvatar = () => {
@@ -251,8 +250,21 @@ export const Drawer: React.FC<DrawerProps> = ({
         </div>
         <div className="drawer-body">
           <div className="profile-hero">
-            <div className="avatar round" style={{ background: room.avatar }}>
-              {initials(room.name)}
+            <div
+              className="avatar round"
+              style={{
+                background: !(room.avatar?.startsWith('http') || room.avatar?.startsWith('data:')) ? room.avatar : undefined,
+                cursor: 'pointer',
+                overflow: 'hidden',
+              }}
+              onClick={() => onOpenFullScreenDp?.({ name: room.name, avatar: room.avatar })}
+              title="Tap to view full screen profile photo"
+            >
+              {room.avatar?.startsWith('http') || room.avatar?.startsWith('data:') ? (
+                <img src={room.avatar} alt={room.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                initials(room.name)
+              )}
             </div>
             <h2>{room.name}</h2>
             <div className="uname">@{room.name.toLowerCase().replace(/\s+/g, '_')}</div>
@@ -352,150 +364,69 @@ export const Drawer: React.FC<DrawerProps> = ({
     if (currentPage === 'profile') {
       return (
         <>
-          {/* Avatar Story/Slideshow Gallery */}
-          <div className="setting-group" style={{ textAlign: 'center' }}>
-            <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
-              {avatars.map((av, idx) => (
-                <div
-                  key={av.id}
-                  onClick={() => setActiveAvatarIdx(idx)}
-                  style={{
-                    height: '3px',
-                    flex: 1,
-                    borderRadius: '2px',
-                    background: idx === safeAvatarIdx ? 'var(--accent-1)' : 'rgba(255,255,255,0.2)',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}
-                  title={`Avatar ${idx + 1}`}
-                />
-              ))}
-            </div>
-
-            <div style={{ position: 'relative', width: '100px', height: '100px', margin: '0 auto' }}>
+          {/* WhatsApp Style Profile Picture (DP) */}
+          <div className="setting-group" style={{ textAlign: 'center', padding: '20px 10px' }}>
+            <div style={{ position: 'relative', width: '110px', height: '110px', margin: '0 auto' }}>
               <div
                 className="avatar round"
                 style={{
                   background: currentAvatar.url.startsWith('linear') ? currentAvatar.url : 'var(--bg-2, #000)',
-                  width: '100px',
-                  height: '100px',
-                  fontSize: '32px',
+                  width: '110px',
+                  height: '110px',
+                  fontSize: '36px',
                   overflow: 'hidden',
                   margin: '0 auto',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+                  boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
                   cursor: 'pointer',
                   position: 'relative',
+                  border: '3px solid var(--accent-1, #00A884)',
                 }}
                 onClick={() => setIsPickerModalOpen(true)}
-                title="Click to Change Profile Picture"
+                title="Change Profile Photo"
               >
                 {currentAvatar.isVideo && currentAvatar.videoUrl ? (
                   <video src={currentAvatar.videoUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : currentAvatar.url && !currentAvatar.url.startsWith('linear') ? (
-                  <img src={currentAvatar.url} alt="Profile Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={currentAvatar.url} alt="Profile Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   initials(profile.name)
                 )}
               </div>
 
-              {/* Camera Overlay Icon */}
+              {/* WhatsApp Style Camera Badge Button */}
               <button
                 onClick={() => setIsPickerModalOpen(true)}
-                title="Change Profile Picture"
+                title="Change Profile Photo"
                 style={{
                   position: 'absolute',
                   bottom: '2px',
                   right: '2px',
-                  width: '30px',
-                  height: '30px',
+                  width: '34px',
+                  height: '34px',
                   borderRadius: '50%',
-                  background: 'var(--accent-1, #00F0FF)',
+                  background: 'var(--accent-1, #00A884)',
                   color: '#000',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '14px',
+                  fontSize: '15px',
                   cursor: 'pointer',
-                  border: '2px solid var(--bg-1, #17212B)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                  border: '2px solid var(--bg-1, #111B21)',
+                  boxShadow: '0 3px 10px rgba(0,0,0,0.4)',
                 }}
               >
                 📷
               </button>
-
-              {avatars.length > 1 && (
-                <>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '-16px',
-                      top: '38px',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.6)',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
-                    onClick={() => setActiveAvatarIdx((prev) => (prev > 0 ? prev - 1 : avatars.length - 1))}
-                  >
-                    ‹
-                  </div>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: '-16px',
-                      top: '38px',
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.6)',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
-                    onClick={() => setActiveAvatarIdx((prev) => (prev < avatars.length - 1 ? prev + 1 : 0))}
-                  >
-                    ›
-                  </div>
-                </>
-              )}
             </div>
 
-            <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
-              {currentAvatar.id === profile.activeAvatarId && (
-                <span style={{ fontSize: '10.5px', background: 'var(--accent-1)', color: '#000', fontWeight: 600, padding: '2px 8px', borderRadius: '10px' }}>
-                  ★ Main Avatar
-                </span>
-              )}
-              {currentAvatar.id === profile.publicAvatarId && (
-                <span style={{ fontSize: '10.5px', background: '#6FF5C6', color: '#000', fontWeight: 600, padding: '2px 8px', borderRadius: '10px' }}>
-                  🌐 Public Photo
-                </span>
-              )}
-              {currentAvatar.isVideo && (
-                <span style={{ fontSize: '10.5px', background: '#B388FF', color: '#000', fontWeight: 600, padding: '2px 8px', borderRadius: '10px' }}>
-                  ▶ Video Avatar
-                </span>
-              )}
-            </div>
-
-            {/* Avatar Actions */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <div style={{ marginTop: '14px' }}>
               <button
                 onClick={() => setIsPickerModalOpen(true)}
                 style={{
-                  background: 'var(--accent-1, #00F0FF)',
-                  color: '#000',
-                  border: 'none',
-                  padding: '7px 16px',
+                  background: 'rgba(0, 168, 132, 0.15)',
+                  color: 'var(--accent-1, #00A884)',
+                  border: '1px solid var(--accent-1, #00A884)',
+                  padding: '7px 18px',
                   borderRadius: '18px',
                   fontSize: '12px',
                   fontWeight: 700,
@@ -503,61 +434,13 @@ export const Drawer: React.FC<DrawerProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: '0 0 12px rgba(0, 240, 255, 0.25)',
                 }}
               >
-                <span>📷</span> Change Profile Picture
-              </button>
-
-              {currentAvatar.id !== profile.activeAvatarId && (
-                <button
-                  onClick={handleSetMainAvatar}
-                  style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    color: '#fff',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    padding: '6px 10px',
-                    borderRadius: '16px',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Set as Main
-                </button>
-              )}
-
-              <button
-                onClick={handleTogglePublicPhoto}
-                style={{
-                  background: profile.publicAvatarId === currentAvatar.id ? 'rgba(111,245,198,0.2)' : 'rgba(255,255,255,0.1)',
-                  color: profile.publicAvatarId === currentAvatar.id ? '#6FF5C6' : '#fff',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  padding: '6px 10px',
-                  borderRadius: '16px',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                }}
-              >
-                {profile.publicAvatarId === currentAvatar.id ? 'Public Photo ✓' : 'Set as Public Photo'}
-              </button>
-
-              <button
-                onClick={handleDeleteCurrentAvatar}
-                style={{
-                  background: 'rgba(255,83,118,0.15)',
-                  color: '#FF5376',
-                  border: '1px solid rgba(255,83,118,0.3)',
-                  padding: '6px 10px',
-                  borderRadius: '16px',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                }}
-              >
-                Delete
+                <span>📷</span> Change Profile Photo
               </button>
             </div>
-            <p className="cat-sub" style={{ marginTop: '8px' }}>
-              Anyone viewing your profile can swipe through your past avatars. Public Photo is visible to everyone while your main photo stays contacts-only.
+            <p className="cat-sub" style={{ marginTop: '10px' }}>
+              Your profile photo is visible to your contacts across chats and groups.
             </p>
           </div>
 
@@ -1153,6 +1036,60 @@ export const Drawer: React.FC<DrawerProps> = ({
               onChange={(e) => onSetFontScale(Number(e.target.value) / 100)}
             />
           </div>
+
+          {/* Custom Font Selector */}
+          <div className="setting-group">
+            <h4>Typography & Font Style</h4>
+            {(() => {
+              const currentFontId = advSettings.selectedFontId || 'inter';
+              const fontObj = FONT_CATALOG.find((f) => f.id === currentFontId) || FONT_CATALOG[28];
+              return (
+                <div
+                  onClick={() => {
+                    if (onOpenFontSelector) onOpenFontSelector();
+                    else onToast('Opening Font Selector...');
+                  }}
+                  style={{
+                    padding: '14px 16px',
+                    borderRadius: '14px',
+                    background: 'var(--bg-2, rgba(255,255,255,0.05))',
+                    border: '1px solid var(--border, rgba(255,255,255,0.1))',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)' }}>
+                      Active Font:{' '}
+                      <span style={{ color: 'var(--accent-1, #00A884)', fontFamily: fontObj.family, fontWeight: 700 }}>
+                        {fontObj.name}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: 'var(--text-1)', marginTop: '2px' }}>
+                      Category: {fontObj.category} • Tap to change typography style
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      background: 'var(--accent-1, #00A884)',
+                      color: '#000',
+                      padding: '6px 14px',
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      boxShadow: '0 2px 8px rgba(0, 168, 132, 0.25)',
+                    }}
+                  >
+                    Change a Font 🔤
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
         </>
       );
     }
@@ -1170,17 +1107,161 @@ export const Drawer: React.FC<DrawerProps> = ({
     }
 
     if (currentPage === 'privacy') {
+      const currentPhotoPrivacy = profile.photoPrivacy || 'contacts';
+      const allowDownloads = profile.allowPhotoDownloads !== false;
+      const autoArchive = advSettings.autoArchiveUnknown || false;
+      const groupPerm = advSettings.groupIconEditPermission || 'all';
+
       return (
-        <div className="setting-group">
-          <h4>Privacy & Security</h4>
-          {toggleRow('privacy', 'root', 0, 'Last seen & online', true)}
-          {toggleRow('privacy', 'root', 1, 'Phone number visibility', false)}
-          {toggleRow('privacy', 'root', 2, 'Profile photo visibility', true)}
-          {toggleRow('privacy', 'root', 3, 'Read receipts', true)}
-          <div className="settings-action-btn" onClick={() => onToast('Passcode configured')}>
-            Enable Passcode Lock
+        <>
+          {/* Profile Photo Visibility */}
+          <div className="setting-group">
+            <h4>Profile Photo Visibility</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+              {[
+                { id: 'everyone', label: 'Everyone', desc: 'Visible to all users and global search' },
+                { id: 'contacts', label: 'My Contacts', desc: 'Visible only to saved contacts' },
+                { id: 'except', label: 'My Contacts Except...', desc: 'Excludes specific blocked contacts' },
+                { id: 'nobody', label: 'Nobody', desc: 'Hidden from everyone' },
+              ].map((opt) => (
+                <div
+                  key={opt.id}
+                  onClick={() => {
+                    onUpdateProfile({ photoPrivacy: opt.id as any });
+                    onToast(`Profile photo visibility set to ${opt.label}`);
+                  }}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    background: currentPhotoPrivacy === opt.id ? 'rgba(0, 168, 132, 0.15)' : 'rgba(255,255,255,0.04)',
+                    border: currentPhotoPrivacy === opt.id ? '1px solid var(--accent-1, #00A884)' : '1px solid rgba(255,255,255,0.08)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: currentPhotoPrivacy === opt.id ? 'var(--accent-1, #00A884)' : 'var(--text-0)' }}>
+                      {opt.label}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-1)' }}>{opt.desc}</div>
+                  </div>
+                  {currentPhotoPrivacy === opt.id && (
+                    <span style={{ color: 'var(--accent-1, #00A884)', fontWeight: 700 }}>✓</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <p className="cat-sub" style={{ fontSize: '11.5px', color: 'var(--text-1)', lineHeight: '1.4' }}>
+              💡 If set to <b>Nobody</b> or if a user is blocked, contacts will see the default avatar silhouette icon instead of your custom photo.
+            </p>
+
+            <div className="toggle-row" style={{ marginTop: '12px' }}>
+              <div>
+                <span>Allow Profile Photo Downloads</span>
+                <div className="cat-sub" style={{ fontSize: '11px' }}>
+                  Allow contacts to download high-res copies of your profile photo
+                </div>
+              </div>
+              <div
+                className={`toggle ${allowDownloads ? 'on' : ''}`}
+                onClick={() => {
+                  const next = !allowDownloads;
+                  onUpdateProfile({ allowPhotoDownloads: next });
+                  onToast(`Profile photo downloads ${next ? 'allowed' : 'disabled'}`);
+                }}
+              />
+            </div>
           </div>
-        </div>
+
+          {/* Chat Archiving & Anti-Spam Privacy */}
+          <div className="setting-group">
+            <h4>Archiving & Anti-Spam Privacy</h4>
+            <div className="toggle-row">
+              <div>
+                <span>Auto-Archive & Mute Unknown Chats</span>
+                <div className="cat-sub" style={{ fontSize: '11px' }}>
+                  Automatically move new chats from non-contacts straight to Archived Chats folder
+                </div>
+              </div>
+              <div
+                className={`toggle ${autoArchive ? 'on' : ''}`}
+                onClick={() => {
+                  const next = !autoArchive;
+                  onUpdateAdvSettings({ autoArchiveUnknown: next });
+                  onToast(`Auto-archive unknown chats ${next ? 'enabled' : 'disabled'}`);
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Group Icon & Settings Permissions */}
+          <div className="setting-group">
+            <h4>Group Photo & Info Permissions</h4>
+            <div style={{ fontSize: '12px', color: 'var(--text-1)', marginBottom: '8px' }}>
+              Who can edit group photo, title & description:
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => {
+                  onUpdateAdvSettings({ groupIconEditPermission: 'all' });
+                  onToast('Group edit permission: All Members');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: groupPerm === 'all' ? '1px solid var(--accent-1)' : '1px solid rgba(255,255,255,0.1)',
+                  background: groupPerm === 'all' ? 'var(--accent-1)' : 'rgba(255,255,255,0.05)',
+                  color: groupPerm === 'all' ? '#000' : '#fff',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                All Members
+              </button>
+              <button
+                onClick={() => {
+                  onUpdateAdvSettings({ groupIconEditPermission: 'admins' });
+                  onToast('Group edit permission: Only Admins');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '8px',
+                  border: groupPerm === 'admins' ? '1px solid var(--accent-1)' : '1px solid rgba(255,255,255,0.1)',
+                  background: groupPerm === 'admins' ? 'var(--accent-1)' : 'rgba(255,255,255,0.05)',
+                  color: groupPerm === 'admins' ? '#000' : '#fff',
+                  fontWeight: 600,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                Only Admins
+              </button>
+            </div>
+          </div>
+
+          {/* General Security & Passcode */}
+          <div className="setting-group">
+            <h4>Security & Blocked Users</h4>
+            {toggleRow('privacy', 'root', 0, 'Last seen & online status', true)}
+            {toggleRow('privacy', 'root', 1, 'Phone number visibility', false)}
+            {toggleRow('privacy', 'root', 3, 'Read receipts', true)}
+
+            <div className="info-row" style={{ marginTop: '8px', cursor: 'pointer' }} onClick={() => onToast('Blocked list opened')}>
+              <span>Blocked Contacts</span>
+              <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{advSettings.blockedContactsCount || 0} contacts ›</span>
+            </div>
+
+            <div className="settings-action-btn" style={{ marginTop: '12px' }} onClick={() => onToast('Passcode screen lock configured')}>
+              🔒 Enable Passcode Lock
+            </div>
+          </div>
+        </>
       );
     }
 

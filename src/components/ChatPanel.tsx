@@ -10,6 +10,8 @@ interface ChatPanelProps {
   isTyping: boolean;
   targetLang?: string;
   interfaceLang?: string;
+  userAvatarUrl?: string;
+  userInitials?: string;
   onSetTargetLang?: (lang: string) => void;
   onTranslateMessage?: (msgIndex: number, targetLang: string) => void;
   onToggleOriginalMessage?: (msgIndex: number) => void;
@@ -35,6 +37,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   isTyping,
   targetLang = 'en',
   interfaceLang = 'en',
+  userAvatarUrl,
+  userInitials = 'YOU',
   onSetTargetLang,
   onTranslateMessage,
   onToggleOriginalMessage,
@@ -346,11 +350,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         <div
           className="avatar round"
-          style={{ background: activeRoom.avatar, width: '42px', height: '42px', fontSize: '14px', cursor: 'pointer' }}
+          style={{
+            background: !(activeRoom.avatar?.startsWith('http') || activeRoom.avatar?.startsWith('data:')) ? activeRoom.avatar : undefined,
+            width: '42px',
+            height: '42px',
+            fontSize: '14px',
+            cursor: 'pointer',
+            overflow: 'hidden',
+          }}
           onClick={onOpenProfile}
           title={`View ${activeRoom.name}'s profile`}
         >
-          {initials(activeRoom.name)}
+          {activeRoom.avatar?.startsWith('http') || activeRoom.avatar?.startsWith('data:') ? (
+            <img src={activeRoom.avatar} alt={activeRoom.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            initials(activeRoom.name)
+          )}
         </div>
 
         <div style={{ cursor: 'pointer' }} onClick={onOpenProfile} title={`View ${activeRoom.name}'s profile`}>
@@ -400,17 +415,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <div
                   className="avatar round"
                   style={{
-                    background: m.avatar || activeRoom.avatar || 'var(--bg-3)',
+                    background: !((m.avatar || activeRoom.avatar)?.startsWith('http') || (m.avatar || activeRoom.avatar)?.startsWith('data:')) ? (m.avatar || activeRoom.avatar || 'var(--bg-3)') : undefined,
                     width: '32px',
                     height: '32px',
                     fontSize: '11px',
                     cursor: 'pointer',
                     flexShrink: 0,
+                    overflow: 'hidden',
                   }}
                   onClick={onOpenProfile}
                   title={`View ${m.name || activeRoom.name}'s profile`}
                 >
-                  {m.name ? initials(m.name) : initials(activeRoom.name)}
+                  {(m.avatar || activeRoom.avatar)?.startsWith('http') || (m.avatar || activeRoom.avatar)?.startsWith('data:') ? (
+                    <img src={m.avatar || activeRoom.avatar} alt={m.name || activeRoom.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    m.name ? initials(m.name) : initials(activeRoom.name)
+                  )}
                 </div>
               )}
 
@@ -525,19 +545,24 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <div
                   className="avatar round"
                   style={{
-                    background: 'linear-gradient(135deg, var(--accent-1), var(--accent-2))',
+                    background: !userAvatarUrl ? 'linear-gradient(135deg, var(--accent-1), var(--accent-2))' : undefined,
                     width: '32px',
                     height: '32px',
                     fontSize: '11px',
                     cursor: 'pointer',
                     flexShrink: 0,
-                    color: '#000',
-                    fontWeight: 700,
+                    overflow: 'hidden',
+                    border: '1.5px solid var(--accent-1, #00A884)',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                   }}
                   onClick={onOpenProfile}
-                  title="View my profile"
+                  title="Your profile picture"
                 >
-                  YOU
+                  {userAvatarUrl ? (
+                    <img src={userAvatarUrl} alt="You" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    userInitials || 'YOU'
+                  )}
                 </div>
               )}
             </div>

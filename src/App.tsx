@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AppSection, ChatRoom, ChatMessage, MailFolder, MailItem, Story, UserProfile, AdvancedSettingsState, ThemeOption } from './types';
+import { AppSection, ChatRoom, ChatMessage, MailFolder, MailItem, Story, StatusItem, UserProfile, AdvancedSettingsState, ThemeOption } from './types';
 import {
   INITIAL_CHATS,
   INITIAL_GROUPS,
@@ -16,6 +16,11 @@ import { ListPanel } from './components/ListPanel';
 import { ChatPanel } from './components/ChatPanel';
 import { Drawer } from './components/Drawer';
 import { Toast } from './components/Toast';
+import { FontSelectorModal } from './components/FontSelectorModal';
+import { StatusEditorModal } from './components/StatusEditorModal';
+import { StatusViewerModal } from './components/StatusViewerModal';
+import { ProfilePreviewModal, ProfilePreviewTarget } from './components/ProfilePreviewModal';
+import { FONT_CATALOG, loadGoogleFont } from './data/fontsCatalog';
 import { translateText } from './services/translator';
 
 export default function App() {
@@ -41,32 +46,18 @@ export default function App() {
     lastName: 'Vance',
     name: 'Alex Vance',
     username: 'alexvance',
-    bio: 'Building things that connect people. Check @nexa_official or https://nexa.app!',
-    phone: '+1 555 0100',
+    bio: 'Building things that connect people in Kampala & beyond. Check @nexa_official!',
+    phone: '+256 700 123456',
     avatars: [
       {
         id: 'av1',
-        url: 'linear-gradient(135deg, #FF9A6F, #FF5376)',
+        url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=250&q=80',
         isVideo: false,
         createdAt: 'Today',
       },
-      {
-        id: 'av2',
-        url: 'linear-gradient(135deg, #00F0FF, #9000FF)',
-        isVideo: true,
-        videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-abstract-glowing-particles-background-41553-large.mp4',
-        createdAt: '2 days ago',
-      },
-      {
-        id: 'av3',
-        url: 'linear-gradient(135deg, #6FF5C6, #4C8DFF)',
-        isVideo: false,
-        isPublicPhoto: true,
-        createdAt: '1 week ago',
-      },
     ],
     activeAvatarId: 'av1',
-    publicAvatarId: 'av3',
+    publicAvatarId: 'av1',
   });
 
   const [advSettings, setAdvSettings] = useState<AdvancedSettingsState>({
@@ -102,6 +93,7 @@ export default function App() {
   const [currentTheme, setCurrentTheme] = useState<ThemeOption['k']>('night');
   const [bubbleRadius, setBubbleRadius] = useState<number>(16);
   const [fontScale, setFontScale] = useState<number>(1);
+  const [isFontModalOpen, setIsFontModalOpen] = useState<boolean>(false);
   const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({});
   const [selectedRadioStates, setSelectedRadioStates] = useState<Record<string, number>>({});
 
@@ -119,11 +111,113 @@ export default function App() {
     document.documentElement.style.setProperty('--font-scale', `${fontScale}`);
   }, [fontScale]);
 
+  const userActiveAvatarUrl =
+    (profile.avatars.find((a) => a.id === profile.activeAvatarId) || profile.avatars[0])?.url;
+
+  // Sync user active avatar to 'Your Story'
+  useEffect(() => {
+    if (userActiveAvatarUrl) {
+      setStories((prev) =>
+        prev.map((s) => (s.mine ? { ...s, avatar: userActiveAvatarUrl } : s))
+      );
+    }
+  }, [userActiveAvatarUrl]);
+
+  // Load and apply custom font dynamically
+  useEffect(() => {
+    const fontId = advSettings.selectedFontId || localStorage.getItem('nexa_selected_font_id') || 'inter';
+    const fontObj = FONT_CATALOG.find((f) => f.id === fontId) || FONT_CATALOG[28];
+    loadGoogleFont(fontObj.name);
+    document.documentElement.style.setProperty('--app-font-family', fontObj.family);
+  }, [advSettings.selectedFontId]);
+
+  const [isStatusEditorOpen, setIsStatusEditorOpen] = useState<boolean>(false);
+  const [viewingStoryId, setViewingStoryId] = useState<string | number | null>(null);
+
+  const [dpPreviewTarget, setDpPreviewTarget] = useState<ProfilePreviewTarget | null>(null);
+  const [dpPreviewInitialMode, setDpPreviewInitialMode] = useState<'card' | 'fullscreen'>('card');
+
+  const handlePreviewDp = (target: { id?: string | number; name: string; avatar?: string }) => {
+    setDpPreviewTarget(target);
+    setDpPreviewInitialMode('card');
+  };
+
+  const handleOpenFullScreenDp = (target: { name: string; avatar?: string }) => {
+    setDpPreviewTarget(target);
+    setDpPreviewInitialMode('fullscreen');
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
     }, 2200);
+  };
+
+  const handlePostStatus = (newItem: StatusItem) => {
+    setStories((prev) =>
+      prev.map((s) => {
+        if (s.mine) {
+          const currentItems = s.items || [];
+          return {
+            ...s,
+            items: [newItem, ...currentItems],
+            timeAgo: 'Just now',
+            seen: false,
+          };
+        }
+        return s;
+      })
+    );
+    showToast('Status update posted successfully! 🎉');
+  };
+
+  const handleViewStory = (story: Story) => {
+    setViewingStoryId(story.id);
+    setStories((prev) =>
+      prev.map((s) => (s.id === story.id ? { ...s, seen: true } : s))
+    );
+  };
+
+  const handleReplyToStory = (contactName: string, replyText: string) => {
+    const targetChat = chats.find((c) => c.name.toLowerCase().includes(contactName.toLowerCase())) || chats[0];
+    if (targetChat) {
+      const now = new Date();
+      const t =
+        now.getHours().toString().padStart(2, '0') +
+        ':' +
+        now.getMinutes().toString().padStart(2, '0');
+      const newMsg: ChatMessage = {
+        from: 'me',
+        type: 'text',
+        text: replyText,
+        time: t,
+        status: 'sent',
+      };
+      setMessages((prev) => ({
+        ...prev,
+        [targetChat.id]: [...(prev[targetChat.id] || []), newMsg],
+      }));
+      showToast(`Reply sent to ${contactName} in chat`);
+    } else {
+      showToast(`Replied to ${contactName}: ${replyText}`);
+    }
+  };
+
+  const handleDeleteStatusItem = (storyId: string | number, itemId: string) => {
+    setStories((prev) =>
+      prev.map((s) => {
+        if (s.id === storyId) {
+          const updated = (s.items || []).filter((it) => it.id !== itemId);
+          return {
+            ...s,
+            items: updated,
+          };
+        }
+        return s;
+      })
+    );
+    showToast('Status update deleted');
   };
 
   const allRooms = [...chats, ...groups, ...channels];
@@ -214,6 +308,24 @@ export default function App() {
         ...prev,
         [activeId]: [...(prev[activeId] || []), replyMsg],
       }));
+
+      // Update room state on incoming reply (including Unmuted vs Muted archiving logic)
+      setChats((prev) =>
+        prev.map((c) => {
+          if (c.id === activeId) {
+            // Unmuted chats auto-unarchive on new incoming message!
+            // Muted chats stay archived!
+            const shouldUnarchive = c.archived && !c.muted;
+            return {
+              ...c,
+              last: replyText,
+              time: replyTime,
+              archived: shouldUnarchive ? false : c.archived,
+            };
+          }
+          return c;
+        })
+      );
     }, 2800);
   };
 
@@ -362,6 +474,30 @@ export default function App() {
     document.documentElement.style.setProperty('--accent-2', c2);
   };
 
+  const handleToggleArchive = (id: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c))
+    );
+  };
+
+  const handleToggleMute = (id: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, muted: !c.muted } : c))
+    );
+  };
+
+  const handleTogglePin = (id: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c))
+    );
+  };
+
+  const handleToggleArchivePin = (id: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, archivedPinned: !c.archivedPinned } : c))
+    );
+  };
+
   return (
     <div className="app">
       <RailNav
@@ -396,7 +532,20 @@ export default function App() {
         interfaceLang={advSettings.interfaceLanguage || 'en'}
         onSelectChat={handleSelectChat}
         onSelectMailFolder={setActiveMailFolder}
-        onNewAction={() => showToast(`New ${section.slice(0, -1)} — creation flow.`)}
+        onToggleArchive={handleToggleArchive}
+        onToggleMute={handleToggleMute}
+        onTogglePin={handleTogglePin}
+        onToggleArchivePin={handleToggleArchivePin}
+        onNewAction={() => {
+          if (section === 'stories') {
+            setIsStatusEditorOpen(true);
+          } else {
+            showToast(`New ${section.slice(0, -1)} — creation flow.`);
+          }
+        }}
+        onViewStory={handleViewStory}
+        onCreateStatus={() => setIsStatusEditorOpen(true)}
+        onPreviewDp={handlePreviewDp}
         onToast={showToast}
         isHiddenOnMobile={!!activeId}
       />
@@ -407,6 +556,8 @@ export default function App() {
         isTyping={isTyping}
         targetLang={advSettings.targetLanguage || advSettings.interfaceLanguage || 'en'}
         interfaceLang={advSettings.interfaceLanguage || 'en'}
+        userAvatarUrl={userActiveAvatarUrl}
+        userInitials={profile.name ? profile.name.slice(0, 2).toUpperCase() : 'YOU'}
         onSetTargetLang={(lang) => setAdvSettings((prev) => ({ ...prev, targetLanguage: lang }))}
         onTranslateMessage={handleTranslateMessage}
         onToggleOriginalMessage={handleToggleOriginalMessage}
@@ -445,7 +596,67 @@ export default function App() {
         onToggleChange={(key, val) => setToggleStates((prev) => ({ ...prev, [key]: val }))}
         onRadioChange={(key, idx) => setSelectedRadioStates((prev) => ({ ...prev, [key]: idx }))}
         onToast={showToast}
+        onOpenFontSelector={() => setIsFontModalOpen(true)}
+        onOpenFullScreenDp={handleOpenFullScreenDp}
       />
+
+      <FontSelectorModal
+        isOpen={isFontModalOpen}
+        activeFontId={advSettings.selectedFontId || 'inter'}
+        onSelectFont={(fontOption) => {
+          setAdvSettings((prev) => ({
+            ...prev,
+            selectedFontId: fontOption.id,
+            fontFamily: fontOption.family,
+          }));
+          localStorage.setItem('nexa_selected_font_id', fontOption.id);
+          showToast(`Font changed to ${fontOption.name} (${fontOption.category})`);
+        }}
+        onClose={() => setIsFontModalOpen(false)}
+      />
+
+      {/* WhatsApp Status Editor Modal */}
+      {isStatusEditorOpen && (
+        <StatusEditorModal
+          userAvatarUrl={userActiveAvatarUrl}
+          userName={profile.name}
+          onClose={() => setIsStatusEditorOpen(false)}
+          onPostStatus={handlePostStatus}
+        />
+      )}
+
+      {/* WhatsApp Status Viewer Player Modal */}
+      {viewingStoryId !== null && (
+        <StatusViewerModal
+          stories={stories}
+          initialStoryId={viewingStoryId}
+          onClose={() => setViewingStoryId(null)}
+          onReplyToStory={handleReplyToStory}
+          onDeleteStatusItem={handleDeleteStatusItem}
+        />
+      )}
+
+      {/* WhatsApp DP Quick Preview & Full Screen Modal */}
+      {dpPreviewTarget !== null && (
+        <ProfilePreviewModal
+          target={dpPreviewTarget}
+          initialMode={dpPreviewInitialMode}
+          onClose={() => setDpPreviewTarget(null)}
+          onOpenChat={(tgt) => {
+            if (tgt.id) {
+              handleSelectChat(String(tgt.id));
+            } else {
+              showToast(`Opening chat with ${tgt.name}...`);
+            }
+          }}
+          onVoiceCall={(tgt) => showToast(`Initiating audio call with ${tgt.name}...`)}
+          onVideoCall={(tgt) => showToast(`Initiating video call with ${tgt.name}...`)}
+          onOpenInfo={() => {
+            setDrawerMode('contact');
+            setDrawerOpen(true);
+          }}
+        />
+      )}
 
       <Toast message={toastMessage} />
     </div>
