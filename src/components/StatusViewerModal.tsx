@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Story, StatusItem } from '../types';
+import { CachedAvatar } from './CachedAvatar';
+import { MapPin, Lock, Eye, X, MoreVertical, Music, Send, Heart, Trash2 } from 'lucide-react';
 
 interface StatusViewerModalProps {
   stories: Story[];

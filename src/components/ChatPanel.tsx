@@ -3,6 +3,12 @@ import { ChatMessage, ChatRoom, MessageStatus } from '../types';
 import { EmojiPicker, AnimatedStickerItem } from './EmojiPicker';
 import { LottiePlayer } from './LottiePlayer';
 import { SUPPORTED_LANGUAGES, getUIText } from '../services/translator';
+import { WallpaperPickerModal } from './WallpaperPickerModal';
+import { SharedMediaModal } from './SharedMediaModal';
+import { MutePickerModal } from './MutePickerModal';
+import { DisappearingMessagesModal } from './DisappearingMessagesModal';
+import { MoreActionsModal } from './MoreActionsModal';
+import { CachedAvatar } from './CachedAvatar';
 
 interface ChatPanelProps {
   activeRoom: ChatRoom | null;
@@ -12,6 +18,8 @@ interface ChatPanelProps {
   interfaceLang?: string;
   userAvatarUrl?: string;
   userInitials?: string;
+  globalWallpaper?: string;
+  globalWallpaperDim?: number;
   onSetTargetLang?: (lang: string) => void;
   onTranslateMessage?: (msgIndex: number, targetLang: string) => void;
   onToggleOriginalMessage?: (msgIndex: number) => void;
@@ -23,6 +31,13 @@ interface ChatPanelProps {
   onOpenProfile: () => void;
   onBackMobile: () => void;
   onToast: (msg: string) => void;
+  onApplyWallpaper?: (background: string, dim: number, applyToAll: boolean) => void;
+  onClearChat?: () => void;
+  onBlockUser?: () => void;
+  onExitGroup?: () => void;
+  onMuteRoom?: (duration: string) => void;
+  onSetDisappearingTimer?: (timer: string) => void;
+  onUnfollowChannel?: () => void;
   isHiddenOnMobile: boolean;
 }
 
@@ -39,6 +54,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   interfaceLang = 'en',
   userAvatarUrl,
   userInitials = 'YOU',
+  globalWallpaper,
+  globalWallpaperDim,
   onSetTargetLang,
   onTranslateMessage,
   onToggleOriginalMessage,
@@ -50,6 +67,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onOpenProfile,
   onBackMobile,
   onToast,
+  onApplyWallpaper,
+  onClearChat,
+  onBlockUser,
+  onExitGroup,
+  onMuteRoom,
+  onSetDisappearingTimer,
+  onUnfollowChannel,
   isHiddenOnMobile,
 }) => {
   const [inputText, setInputText] = useState('');
@@ -58,6 +82,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactionBarMsgIdx, setReactionBarMsgIdx] = useState<number | null>(null);
   const [customReactionPickerMsgIdx, setCustomReactionPickerMsgIdx] = useState<number | null>(null);
+
+  // WhatsApp Context Menu & Sub-Modal States
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const [showSearchOverlay, setShowSearchOverlay] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showWallpaperModal, setShowWallpaperModal] = useState(false);
+  const [showSharedMediaModal, setShowSharedMediaModal] = useState(false);
+  const [showMuteModal, setShowMuteModal] = useState(false);
+  const [showDisappearingModal, setShowDisappearingModal] = useState(false);
+  const [showMoreModal, setShowMoreModal] = useState(false);
+  const [showUnfollowPrompt, setShowUnfollowPrompt] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -348,32 +384,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </svg>
         </div>
 
-        <div
-          className="avatar round"
-          style={{
-            background: !(activeRoom.avatar?.startsWith('http') || activeRoom.avatar?.startsWith('data:')) ? activeRoom.avatar : undefined,
-            width: '42px',
-            height: '42px',
-            fontSize: '14px',
-            cursor: 'pointer',
-            overflow: 'hidden',
-          }}
+        <CachedAvatar
+          src={activeRoom.avatar}
+          name={activeRoom.name}
+          size={42}
           onClick={onOpenProfile}
-          title={`View ${activeRoom.name}'s profile`}
-        >
-          {activeRoom.avatar?.startsWith('http') || activeRoom.avatar?.startsWith('data:') ? (
-            <img src={activeRoom.avatar} alt={activeRoom.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            initials(activeRoom.name)
-          )}
-        </div>
+        />
 
         <div style={{ cursor: 'pointer' }} onClick={onOpenProfile} title={`View ${activeRoom.name}'s profile`}>
           <div className="li-name">{activeRoom.name}</div>
           <div className="status">{statusText}</div>
         </div>
 
-        <div className="header-actions">
+        <div className="header-actions" style={{ position: 'relative' }}>
           <div className="icon-btn" title="Voice call" onClick={() => onToast(`Voice call with ${activeRoom.name}`)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z" />
@@ -391,10 +414,306 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <path d="M12 16v-4M12 8h.01" />
             </svg>
           </div>
+
+          {/* 3-Dots Context Menu Trigger */}
+          <div
+            className={`icon-btn ${showContextMenu ? 'active' : ''}`}
+            onClick={() => setShowContextMenu((prev) => !prev)}
+            title="More Options"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="5" r="1.5" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+              <circle cx="12" cy="19" r="1.5" fill="currentColor" />
+            </svg>
+          </div>
+
+          {/* Context Dropdown Menu */}
+          {showContextMenu && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '48px',
+                right: '0',
+                width: '230px',
+                background: 'var(--bg-1, #111b21)',
+                borderRadius: '12px',
+                boxShadow: '0 12px 32px rgba(0, 0, 0, 0.7)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '6px',
+                zIndex: 10000,
+                display: 'flex',
+                flexDirection: 'column',
+                animation: 'fadeInScale 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* CHANNEL CONTEXT MENU */}
+              {activeRoom.type === 'channel' ? (
+                <>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      onOpenProfile();
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>📢 Channel info</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://wa.me/channel/${activeRoom.id}`);
+                      onToast('Channel invite link copied to clipboard!');
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>🔗 Share</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      if (onMuteRoom) onMuteRoom(activeRoom.muted ? 'Off' : 'Always');
+                      else onToast(activeRoom.muted ? 'Channel unmuted' : 'Channel muted');
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>{activeRoom.muted ? '🔔 Unmute' : '🔕 Mute'}</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowUnfollowPrompt(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>🚪 Unfollow</span>
+                  </button>
+                  <button
+                    className="context-menu-item danger"
+                    onClick={() => {
+                      setShowMoreModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>⚠️ Report</span>
+                  </button>
+                </>
+              ) : activeRoom.type === 'group' ? (
+                /* GROUP CHAT CONTEXT MENU */
+                <>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      onOpenProfile();
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>👥 Group info</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowSharedMediaModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>📁 Group media</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowSearchOverlay(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>🔍 Search</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowMuteModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>🔕 Mute notifications</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowDisappearingModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>⏳ Disappearing messages</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowWallpaperModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>🖼️ Wallpaper</span>
+                  </button>
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowMoreModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>➕ More ›</span>
+                  </button>
+                </>
+              ) : (
+                /* 1-ON-1 CHAT CONTEXT MENU */
+                <>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      onOpenProfile();
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>👤 View contact</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowSharedMediaModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>📁 Media, links, and docs</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowSearchOverlay(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>🔍 Search</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowMuteModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>🔕 Mute notifications</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowDisappearingModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>⏳ Disappearing messages</span>
+                  </button>
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowWallpaperModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>🖼️ Wallpaper</span>
+                  </button>
+                  <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '4px 0' }} />
+                  <button
+                    className="context-menu-item"
+                    onClick={() => {
+                      setShowMoreModal(true);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <span>➕ More ›</span>
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="messages">
+      {/* In-Chat Real-Time Search Overlay */}
+      {showSearchOverlay && (
+        <div
+          style={{
+            padding: '8px 16px',
+            background: 'var(--bg-2, #202c33)',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            zIndex: 10,
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>🔍</span>
+          <input
+            type="text"
+            placeholder={`Search messages in ${activeRoom.name}...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              background: 'var(--bg-1, #111b21)',
+              border: '1px solid var(--accent-1, #00A884)',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              color: '#fff',
+              fontSize: '13px',
+              outline: 'none',
+            }}
+            autoFocus
+          />
+          {searchQuery && (
+            <span style={{ fontSize: '12px', color: 'var(--accent-1, #00A884)', fontWeight: 600 }}>
+              {messages.filter((m) => m.text?.toLowerCase().includes(searchQuery.toLowerCase())).length} matches
+            </span>
+          )}
+          <button
+            onClick={() => {
+              setShowSearchOverlay(false);
+              setSearchQuery('');
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: '16px',
+              cursor: 'pointer',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Messages Viewport with Custom Wallpaper */}
+      <div
+        className="messages"
+        style={{
+          background: (activeRoom as any).wallpaper || globalWallpaper || 'radial-gradient(circle at 50% 50%, #0d1e28 0%, #0b141a 100%)',
+          position: 'relative',
+        }}
+      >
+        {/* Wallpaper Dimming Layer */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: '#000000',
+            opacity: ((activeRoom as any).wallpaperDim ?? globalWallpaperDim ?? 20) / 100,
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
         <div className="date-divider">
           <svg viewBox="0 0 100 8" preserveAspectRatio="none">
             <path d="M0 4 Q5 0 10 4 T20 4 T30 4 T40 4 T50 4 T60 4 T70 4 T80 4 T90 4 T100 4" stroke="currentColor" fill="none" strokeWidth="1" />
@@ -412,26 +731,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           return (
             <div key={i} className={`msg-row ${mine ? 'mine' : ''}`} style={{ position: 'relative' }}>
               {!mine && (
-                <div
-                  className="avatar round"
-                  style={{
-                    background: !((m.avatar || activeRoom.avatar)?.startsWith('http') || (m.avatar || activeRoom.avatar)?.startsWith('data:')) ? (m.avatar || activeRoom.avatar || 'var(--bg-3)') : undefined,
-                    width: '32px',
-                    height: '32px',
-                    fontSize: '11px',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    overflow: 'hidden',
-                  }}
+                <CachedAvatar
+                  src={m.avatar || activeRoom.avatar}
+                  name={m.name || activeRoom.name}
+                  size={32}
                   onClick={onOpenProfile}
-                  title={`View ${m.name || activeRoom.name}'s profile`}
-                >
-                  {(m.avatar || activeRoom.avatar)?.startsWith('http') || (m.avatar || activeRoom.avatar)?.startsWith('data:') ? (
-                    <img src={m.avatar || activeRoom.avatar} alt={m.name || activeRoom.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    m.name ? initials(m.name) : initials(activeRoom.name)
-                  )}
-                </div>
+                />
               )}
 
               <div className="bubble-wrap" style={{ position: 'relative' }}>
@@ -670,6 +975,141 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modals & Sheets */}
+      {showWallpaperModal && (
+        <WallpaperPickerModal
+          roomName={activeRoom.name}
+          currentBg={(activeRoom as any).wallpaper || globalWallpaper}
+          currentDim={(activeRoom as any).wallpaperDim ?? globalWallpaperDim}
+          onApplyWallpaper={(bg, dim, applyAll) => {
+            if (onApplyWallpaper) onApplyWallpaper(bg, dim, applyAll);
+            onToast(applyAll ? 'Set as default wallpaper for all chats!' : `Wallpaper updated for ${activeRoom.name}`);
+          }}
+          onClose={() => setShowWallpaperModal(false)}
+          onToast={onToast}
+        />
+      )}
+
+      {showSharedMediaModal && (
+        <SharedMediaModal
+          roomName={activeRoom.name}
+          messages={messages}
+          onClose={() => setShowSharedMediaModal(false)}
+          onToast={onToast}
+        />
+      )}
+
+      {showMuteModal && (
+        <MutePickerModal
+          roomName={activeRoom.name}
+          onConfirmMute={(duration, showNotifs) => {
+            if (onMuteRoom) onMuteRoom(duration);
+            onToast(`Muted ${activeRoom.name} for ${duration}${showNotifs ? ' (Notifications silent)' : ''}`);
+          }}
+          onClose={() => setShowMuteModal(false)}
+        />
+      )}
+
+      {showDisappearingModal && (
+        <DisappearingMessagesModal
+          roomName={activeRoom.name}
+          currentTimer={(activeRoom as any).disappearingTimer || 'Off'}
+          onConfirm={(timer) => {
+            if (onSetDisappearingTimer) onSetDisappearingTimer(timer);
+            onToast(timer === 'Off' ? 'Disappearing messages turned off' : `Disappearing messages set to ${timer}`);
+          }}
+          onClose={() => setShowDisappearingModal(false)}
+        />
+      )}
+
+      {showMoreModal && (
+        <MoreActionsModal
+          room={activeRoom}
+          messages={messages}
+          onReport={() => onToast(`Reported ${activeRoom.name} to moderation.`)}
+          onBlock={() => {
+            if (onBlockUser) onBlockUser();
+            onToast(`Blocked ${activeRoom.name}`);
+          }}
+          onExitGroup={() => {
+            if (onExitGroup) onExitGroup();
+            onToast(`Left ${activeRoom.name}`);
+          }}
+          onClearChat={() => {
+            if (onClearChat) onClearChat();
+            onToast(`Cleared chat history for ${activeRoom.name}`);
+          }}
+          onExportChat={() => {
+            const text = messages.map((m) => `[${m.time}] ${m.from === 'me' ? 'YOU' : activeRoom.name}: ${m.text || m.type}`).join('\n');
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Chat_Archive_${activeRoom.name.replace(/\s+/g, '_')}.txt`;
+            a.click();
+            onToast(`Exported conversation log to text file!`);
+          }}
+          onAddShortcut={() => onToast(`Shortcut for "${activeRoom.name}" added to Home Screen!`)}
+          onClose={() => setShowMoreModal(false)}
+        />
+      )}
+
+      {/* Unfollow Channel Prompt */}
+      {showUnfollowPrompt && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          }}
+          onClick={() => setShowUnfollowPrompt(false)}
+        >
+          <div
+            style={{
+              width: '360px',
+              maxWidth: '90vw',
+              background: 'var(--bg-1, #111b21)',
+              borderRadius: '16px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '20px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: '#FF5376' }}>
+              🚪 Unfollow "{activeRoom.name}"?
+            </div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4', marginBottom: '20px' }}>
+              You can always follow this channel again anytime from the Updates tab.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                onClick={() => setShowUnfollowPrompt(false)}
+                style={{ padding: '8px 16px', background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '8px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (onUnfollowChannel) onUnfollowChannel();
+                  onToast(`Unfollowed ${activeRoom.name}`);
+                  setShowUnfollowPrompt(false);
+                }}
+                style={{ padding: '8px 18px', background: '#FF5376', border: 'none', color: '#fff', fontWeight: 700, borderRadius: '8px', cursor: 'pointer' }}
+              >
+                Unfollow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

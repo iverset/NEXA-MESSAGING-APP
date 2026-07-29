@@ -4,6 +4,7 @@ import { THEMES, ACCENTS } from '../data';
 import { FONT_CATALOG } from '../data/fontsCatalog';
 import { SUPPORTED_LANGUAGES, getUIText } from '../services/translator';
 import { ProfilePicturePickerModal, ProfilePictureSelection } from './ProfilePicturePickerModal';
+import { CachedAvatar } from './CachedAvatar';
 
 interface DrawerProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ interface DrawerProps {
   onRadioChange: (key: string, idx: number) => void;
   onToast: (msg: string) => void;
   onOpenFontSelector?: () => void;
+  onOpenWallpaperPicker?: () => void;
   onOpenFullScreenDp?: (target: { name: string; avatar?: string }) => void;
 }
 
@@ -63,6 +65,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   onRadioChange,
   onToast,
   onOpenFontSelector,
+  onOpenWallpaperPicker,
   onOpenFullScreenDp,
 }) => {
   const [settingsStack, setSettingsStack] = useState<string[]>(['home']);
@@ -250,22 +253,12 @@ export const Drawer: React.FC<DrawerProps> = ({
         </div>
         <div className="drawer-body">
           <div className="profile-hero">
-            <div
-              className="avatar round"
-              style={{
-                background: !(room.avatar?.startsWith('http') || room.avatar?.startsWith('data:')) ? room.avatar : undefined,
-                cursor: 'pointer',
-                overflow: 'hidden',
-              }}
+            <CachedAvatar
+              src={room.avatar}
+              name={room.name}
+              size={80}
               onClick={() => onOpenFullScreenDp?.({ name: room.name, avatar: room.avatar })}
-              title="Tap to view full screen profile photo"
-            >
-              {room.avatar?.startsWith('http') || room.avatar?.startsWith('data:') ? (
-                <img src={room.avatar} alt={room.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                initials(room.name)
-              )}
-            </div>
+            />
             <h2>{room.name}</h2>
             <div className="uname">@{room.name.toLowerCase().replace(/\s+/g, '_')}</div>
             <div className="pron-badge">{room.members ? `${room.members} members` : 'she/her'}</div>
@@ -1089,6 +1082,85 @@ export const Drawer: React.FC<DrawerProps> = ({
                 </div>
               );
             })()}
+          </div>
+
+          {/* Chat Wallpaper Customizer */}
+          <div className="setting-group">
+            <h4>Chat Wallpaper & Customization</h4>
+            <div
+              onClick={() => {
+                if (onOpenWallpaperPicker) onOpenWallpaperPicker();
+                else onToast('Opening Wallpaper Picker...');
+              }}
+              style={{
+                padding: '14px 16px',
+                borderRadius: '14px',
+                background: 'var(--bg-2, rgba(255,255,255,0.05))',
+                border: '1px solid var(--border, rgba(255,255,255,0.1))',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.15)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-0)' }}>
+                  Customize Chat Wallpaper
+                </div>
+                <div style={{ fontSize: '11.5px', color: 'var(--text-1)', marginTop: '2px' }}>
+                  Choose WhatsApp doodles, solids, African motifs, or custom image
+                </div>
+              </div>
+              <span
+                style={{
+                  background: 'var(--accent-1, #00A884)',
+                  color: '#000',
+                  padding: '6px 14px',
+                  borderRadius: '10px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  boxShadow: '0 2px 8px rgba(0, 168, 132, 0.25)',
+                }}
+              >
+                Change Wallpaper
+              </span>
+            </div>
+          </div>
+
+          {/* Stories Tray Toggle */}
+          <div className="setting-group">
+            <h4>Stories & Status Display</h4>
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '14px',
+                background: 'var(--bg-2, rgba(255,255,255,0.05))',
+                border: '1px solid var(--border, rgba(255,255,255,0.1))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-0)' }}>
+                  Show Stories Tray in Chats List
+                </div>
+                <div style={{ fontSize: '11.5px', color: 'var(--text-1)', marginTop: '2px' }}>
+                  Display recent story update circles above your chat list
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={advSettings.showStoryTrayInChats !== false}
+                onChange={(e) => {
+                  onUpdateAdvSettings({ showStoryTrayInChats: e.target.checked });
+                  onToast(e.target.checked ? 'Stories tray enabled on chats' : 'Stories tray hidden on chats');
+                }}
+                style={{ width: '18px', height: '18px', accentColor: 'var(--accent-1, #00A884)', cursor: 'pointer' }}
+              />
+            </div>
           </div>
         </>
       );

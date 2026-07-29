@@ -161,6 +161,7 @@ export interface AdvancedSettingsState {
   autoArchiveUnknown: boolean;
   groupIconEditPermission: 'all' | 'admins';
   blockedContactsCount: number;
+  showStoryTrayInChats?: boolean;
   // Data & Automatic Media Downloads
   autoDownloadPrivate: boolean;
   autoDownloadGroups: boolean;

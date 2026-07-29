@@ -20,6 +20,7 @@ import { FontSelectorModal } from './components/FontSelectorModal';
 import { StatusEditorModal } from './components/StatusEditorModal';
 import { StatusViewerModal } from './components/StatusViewerModal';
 import { ProfilePreviewModal, ProfilePreviewTarget } from './components/ProfilePreviewModal';
+import { WallpaperPickerModal } from './components/WallpaperPickerModal';
 import { FONT_CATALOG, loadGoogleFont } from './data/fontsCatalog';
 import { translateText } from './services/translator';
 
@@ -136,6 +137,76 @@ export default function App() {
 
   const [dpPreviewTarget, setDpPreviewTarget] = useState<ProfilePreviewTarget | null>(null);
   const [dpPreviewInitialMode, setDpPreviewInitialMode] = useState<'card' | 'fullscreen'>('card');
+
+  // Wallpaper & Chat Context Action States
+  const [globalWallpaper, setGlobalWallpaper] = useState<string>('radial-gradient(circle at 50% 50%, #0d1e28 0%, #0b141a 100%)');
+  const [globalWallpaperDim, setGlobalWallpaperDim] = useState<number>(20);
+  const [isWallpaperModalOpen, setIsWallpaperModalOpen] = useState<boolean>(false);
+
+  const handleApplyWallpaper = (background: string, dim: number, applyToAll: boolean) => {
+    if (applyToAll) {
+      setGlobalWallpaper(background);
+      setGlobalWallpaperDim(dim);
+      setChats((prev) => prev.map((c) => ({ ...c, wallpaper: undefined, wallpaperDim: undefined })));
+      setGroups((prev) => prev.map((g) => ({ ...g, wallpaper: undefined, wallpaperDim: undefined })));
+      setChannels((prev) => prev.map((ch) => ({ ...ch, wallpaper: undefined, wallpaperDim: undefined })));
+    } else if (activeId) {
+      const updater = (list: ChatRoom[]) =>
+        list.map((item) => (item.id === activeId ? { ...item, wallpaper: background, wallpaperDim: dim } : item));
+      setChats(updater);
+      setGroups(updater);
+      setChannels(updater);
+    }
+  };
+
+  const handleClearChat = () => {
+    if (activeId) {
+      setMessages((prev) => ({ ...prev, [activeId]: [] }));
+    }
+  };
+
+  const handleBlockUser = () => {
+    if (activeRoom) {
+      const updater = (list: ChatRoom[]) =>
+        list.map((item) => (item.id === activeRoom.id ? { ...item, blocked: true } : item));
+      setChats(updater);
+    }
+  };
+
+  const handleExitGroup = () => {
+    if (activeRoom) {
+      const updater = (list: ChatRoom[]) =>
+        list.map((item) => (item.id === activeRoom.id ? { ...item, left: true } : item));
+      setGroups(updater);
+    }
+  };
+
+  const handleMuteRoom = (duration: string) => {
+    if (activeRoom) {
+      const isMuted = duration !== 'Off';
+      const updater = (list: ChatRoom[]) =>
+        list.map((item) => (item.id === activeRoom.id ? { ...item, muted: isMuted } : item));
+      setChats(updater);
+      setGroups(updater);
+      setChannels(updater);
+    }
+  };
+
+  const handleSetDisappearingTimer = (timer: string) => {
+    if (activeRoom) {
+      const updater = (list: ChatRoom[]) =>
+        list.map((item) => (item.id === activeRoom.id ? { ...item, disappearingTimer: timer } : item));
+      setChats(updater);
+      setGroups(updater);
+    }
+  };
+
+  const handleUnfollowChannel = () => {
+    if (activeRoom) {
+      setChannels((prev) => prev.filter((ch) => ch.id !== activeRoom.id));
+      setActiveId(null);
+    }
+  };
 
   const handlePreviewDp = (target: { id?: string | number; name: string; avatar?: string }) => {
     setDpPreviewTarget(target);
@@ -546,6 +617,7 @@ export default function App() {
         onViewStory={handleViewStory}
         onCreateStatus={() => setIsStatusEditorOpen(true)}
         onPreviewDp={handlePreviewDp}
+        showStoryTrayInChats={advSettings.showStoryTrayInChats ?? true}
         onToast={showToast}
         isHiddenOnMobile={!!activeId}
       />
@@ -558,6 +630,8 @@ export default function App() {
         interfaceLang={advSettings.interfaceLanguage || 'en'}
         userAvatarUrl={userActiveAvatarUrl}
         userInitials={profile.name ? profile.name.slice(0, 2).toUpperCase() : 'YOU'}
+        globalWallpaper={globalWallpaper}
+        globalWallpaperDim={globalWallpaperDim}
         onSetTargetLang={(lang) => setAdvSettings((prev) => ({ ...prev, targetLanguage: lang }))}
         onTranslateMessage={handleTranslateMessage}
         onToggleOriginalMessage={handleToggleOriginalMessage}
@@ -572,6 +646,13 @@ export default function App() {
         }}
         onBackMobile={() => setActiveId(null)}
         onToast={showToast}
+        onApplyWallpaper={handleApplyWallpaper}
+        onClearChat={handleClearChat}
+        onBlockUser={handleBlockUser}
+        onExitGroup={handleExitGroup}
+        onMuteRoom={handleMuteRoom}
+        onSetDisappearingTimer={handleSetDisappearingTimer}
+        onUnfollowChannel={handleUnfollowChannel}
         isHiddenOnMobile={!activeId}
       />
 
@@ -597,8 +678,24 @@ export default function App() {
         onRadioChange={(key, idx) => setSelectedRadioStates((prev) => ({ ...prev, [key]: idx }))}
         onToast={showToast}
         onOpenFontSelector={() => setIsFontModalOpen(true)}
+        onOpenWallpaperPicker={() => setIsWallpaperModalOpen(true)}
         onOpenFullScreenDp={handleOpenFullScreenDp}
       />
+
+      {/* Global Wallpaper Picker Triggered from Settings */}
+      {isWallpaperModalOpen && (
+        <WallpaperPickerModal
+          roomName={activeRoom?.name}
+          currentBg={globalWallpaper}
+          currentDim={globalWallpaperDim}
+          onApplyWallpaper={(bg, dim, applyAll) => {
+            handleApplyWallpaper(bg, dim, applyAll);
+            showToast('General chat wallpaper updated!');
+          }}
+          onClose={() => setIsWallpaperModalOpen(false)}
+          onToast={showToast}
+        />
+      )}
 
       <FontSelectorModal
         isOpen={isFontModalOpen}

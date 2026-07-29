@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { CachedAvatar } from './CachedAvatar';
+import { optimizeCdnImageUrl } from '../services/ImageCacheService';
 
 function initials(name: string): string {
   if (!name) return '??';
@@ -128,7 +130,7 @@ export const ProfilePreviewModal: React.FC<ProfilePreviewModalProps> = ({
             onClick={() => setViewMode('fullscreen')}
             title="Tap to expand full screen"
           >
-            {renderAvatar(target.avatar, target.name)}
+            <CachedAvatar src={target.avatar} name={target.name} size={280} style={{ borderRadius: 0 }} />
             
             {/* Visual expand badge prompt */}
             <div

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AppSection, ChatRoom, MailFolder, MailItem, Story } from '../types';
 import { getPaletteGrad } from '../data';
 import { getUIText } from '../services/translator';
+import { CachedAvatar } from './CachedAvatar';
+import { batchPreloadAvatars } from '../services/ImageCacheService';
 
 interface ListPanelProps {
   section: AppSection;
@@ -25,6 +27,7 @@ interface ListPanelProps {
   onViewStory?: (story: Story) => void;
   onCreateStatus?: () => void;
   onPreviewDp?: (target: { id?: string | number; name: string; avatar?: string }) => void;
+  showStoryTrayInChats?: boolean;
   onToast: (msg: string) => void;
   isHiddenOnMobile: boolean;
 }
@@ -69,6 +72,7 @@ export const ListPanel: React.FC<ListPanelProps> = ({
   onViewStory,
   onCreateStatus,
   onPreviewDp,
+  showStoryTrayInChats = true,
   onToast,
   isHiddenOnMobile,
 }) => {
@@ -83,7 +87,7 @@ export const ListPanel: React.FC<ListPanelProps> = ({
   const title = getUIText(section, interfaceLang) !== section ? getUIText(section, interfaceLang) : rawTitle;
   const q = search.toLowerCase();
 
-  const showStoriesBar = section === 'chats' && !viewingArchiveView;
+  const showStoriesBar = section === 'chats' && !viewingArchiveView && showStoryTrayInChats;
   const showFolderTabs = section === 'mail';
 
   const mailFolders: MailFolder[] = ['inbox', 'sent', 'drafts', 'spam', 'trash'];
@@ -94,6 +98,18 @@ export const ListPanel: React.FC<ListPanelProps> = ({
 
   // Unread count inside archive
   const archivedUnreadTotal = archivedList.reduce((acc, curr) => acc + (curr.unread || 0), 0);
+
+  // Batch preload all profile avatars into memory cache to eliminate flickering during lazy loading
+  useEffect(() => {
+    const allAvatarUrls = [
+      ...chats.map((c) => c.avatar),
+      ...groups.map((g) => g.avatar),
+      ...channels.map((ch) => ch.avatar),
+      ...communities.map((cm) => cm.avatar),
+      ...stories.map((st) => st.avatar),
+    ];
+    batchPreloadAvatars(allAvatarUrls, 96);
+  }, [chats, groups, channels, communities, stories]);
 
   return (
     <div className={`list-panel ${isHiddenOnMobile ? 'hide' : ''}`}>
@@ -155,19 +171,14 @@ export const ListPanel: React.FC<ListPanelProps> = ({
             <div
               key={s.id}
               className="story"
-              onClick={() => onToast('Story viewer — active session preview 👀')}
+              onClick={() => {
+                if (onViewStory) onViewStory(s);
+                else onToast(`Opening story from ${s.name}`);
+              }}
             >
               <div className={`story-ring ${s.seen ? 'seen' : ''}`}>
                 <div className="inner">
-                  <div
-                    className="avatar-sm"
-                    style={{
-                      background: !(s.avatar?.startsWith('http') || s.avatar?.startsWith('data:')) ? s.avatar : undefined,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {renderAvatar(s.avatar, s.name)}
-                  </div>
+                  <CachedAvatar src={s.avatar} name={s.name} size={42} />
                 </div>
               </div>
               <span>{s.mine ? 'Your story' : s.name}</span>
@@ -308,22 +319,17 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                 onClick={() => onSelectChat(r.id)}
                 style={{ position: 'relative' }}
               >
-                <div
-                  className="avatar round"
-                  style={{
-                    background: !(r.avatar?.startsWith('http') || r.avatar?.startsWith('data:')) ? r.avatar : undefined,
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                  }}
+                <CachedAvatar
+                  src={r.avatar}
+                  name={r.name}
+                  size={48}
+                  showOnlineBadge={true}
+                  isOnline={r.online}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onPreviewDp) onPreviewDp({ id: r.id, name: r.name, avatar: r.avatar });
                   }}
-                  title={`View ${r.name}'s profile photo`}
-                >
-                  {renderAvatar(r.avatar, r.name)}
-                  {r.online && <div className="online-dot" />}
-                </div>
+                />
                 <div className="li-body">
                   <div className="li-top">
                     <span className="li-name">{r.name}</span>
@@ -467,21 +473,15 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                     onClick={() => onSelectChat(r.id)}
                     style={{ position: 'relative' }}
                   >
-                    <div
-                      className="avatar round"
-                      style={{
-                        background: !(r.avatar?.startsWith('http') || r.avatar?.startsWith('data:')) ? r.avatar : undefined,
-                        overflow: 'hidden',
-                        cursor: 'pointer',
-                      }}
+                    <CachedAvatar
+                      src={r.avatar}
+                      name={r.name}
+                      size={48}
                       onClick={(e) => {
                         e.stopPropagation();
                         if (onPreviewDp) onPreviewDp({ id: r.id, name: r.name, avatar: r.avatar });
                       }}
-                      title={`View ${r.name}'s profile photo`}
-                    >
-                      {renderAvatar(r.avatar, r.name)}
-                    </div>
+                    />
                     <div className="li-body">
                       <div className="li-top">
                         <span className="li-name">{r.name}</span>
@@ -556,21 +556,15 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                 className={`list-item ${activeId === r.id ? 'selected' : ''}`}
                 onClick={() => onSelectChat(r.id)}
               >
-                <div
-                  className="avatar round"
-                  style={{
-                    background: !(r.avatar?.startsWith('http') || r.avatar?.startsWith('data:')) ? r.avatar : undefined,
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                  }}
+                <CachedAvatar
+                  src={r.avatar}
+                  name={r.name}
+                  size={48}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onPreviewDp) onPreviewDp({ id: r.id, name: r.name, avatar: r.avatar });
                   }}
-                  title={`View ${r.name}'s profile photo`}
-                >
-                  {renderAvatar(r.avatar, r.name)}
-                </div>
+                />
                 <div className="li-body">
                   <div className="li-top">
                     <span className="li-name">{r.name}</span>
@@ -596,21 +590,15 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                 className={`list-item ${activeId === r.id ? 'selected' : ''}`}
                 onClick={() => onSelectChat(r.id)}
               >
-                <div
-                  className="avatar round"
-                  style={{
-                    background: !(r.avatar?.startsWith('http') || r.avatar?.startsWith('data:')) ? r.avatar : undefined,
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                  }}
+                <CachedAvatar
+                  src={r.avatar}
+                  name={r.name}
+                  size={48}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onPreviewDp) onPreviewDp({ id: r.id, name: r.name, avatar: r.avatar });
                   }}
-                  title={`View ${r.name}'s profile photo`}
-                >
-                  {renderAvatar(r.avatar, r.name)}
-                </div>
+                />
                 <div className="li-body">
                   <div className="li-top">
                     <span className="li-name">{r.name}</span>
@@ -635,22 +623,15 @@ export const ListPanel: React.FC<ListPanelProps> = ({
                 className="list-item"
                 onClick={() => onToast(`Opened ${r.name}`)}
               >
-                <div
-                  className="avatar round"
-                  style={{
-                    background: !(r.avatar?.startsWith('http') || r.avatar?.startsWith('data:')) ? r.avatar : undefined,
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                    cursor: 'pointer',
-                  }}
+                <CachedAvatar
+                  src={r.avatar}
+                  name={r.name}
+                  size={48}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onPreviewDp) onPreviewDp({ id: r.id, name: r.name, avatar: r.avatar });
                   }}
-                  title={`View ${r.name}'s profile photo`}
-                >
-                  {renderAvatar(r.avatar, r.name)}
-                </div>
+                />
                 <div className="li-body">
                   <div className="li-top">
                     <span className="li-name">{r.name}</span>
