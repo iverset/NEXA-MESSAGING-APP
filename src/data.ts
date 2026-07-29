@@ -22,6 +22,10 @@ export const INITIAL_CHATS: ChatRoom[] = [
   { id: 'c3', name: 'Ssemwanga Ronald', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'That sketch of the Buganda motif looks great!', time: 'Yesterday' },
   { id: 'c4', name: 'Namubiru Sarah', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=75', online: false, unread: 5, pinned: false, muted: false, last: '📍 Live location shared · Kampala Road', time: 'Yesterday' },
   { id: 'c5', name: 'Kizza Aloysius', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'Poll: Pick the launch date for Kampala App', time: 'Mon' },
+  // Pre-archived threads: c6 is muted (stays archived on new messages),
+  // c7 is unmuted (auto-unarchives and jumps to the top on a new message).
+  { id: 'c6', name: 'Nakato Promotions', avatar: 'https://images.unsplash.com/photo-1521119989659-a83eee488004?auto=format&fit=crop&w=120&q=75', online: false, unread: 4, pinned: false, muted: true, archived: true, archivedPinned: true, last: 'Weekly offers: airtime bundles at half price', time: 'Tue' },
+  { id: 'c7', name: 'Wasswa Denis', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&q=75', online: false, unread: 1, pinned: false, muted: false, archived: true, last: 'Webale nyo for the invoice, received it well', time: 'Sun' },
 ];
 
 export const INITIAL_GROUPS: ChatRoom[] = [
@@ -203,6 +207,13 @@ export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
   ],
   c5: [
     { from: 'them', type: 'poll', question: 'Pick the launch date for Kampala App', options: [['Sept 12', 62], ['Sept 19', 38]], time: 'Mon' },
+  ],
+  c6: [
+    { from: 'them', type: 'text', text: 'Weekly offers: airtime bundles at half price', time: 'Tue' },
+  ],
+  c7: [
+    { from: 'me', type: 'doc', name: 'invoice-2291.pdf', size: '310 KB', time: 'Sun', status: 'read' },
+    { from: 'them', type: 'text', text: 'Webale nyo for the invoice, received it well', time: 'Sun' },
   ],
   g1: [
     { from: 'them', name: 'Ssemwanga', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=250&q=80', type: 'text', text: 'Updated the tokens doc for Kampala Hub, ready for review.', time: '11:02' },

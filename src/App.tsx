@@ -380,23 +380,46 @@ export default function App() {
         [activeId]: [...(prev[activeId] || []), replyMsg],
       }));
 
-      // Update room state on incoming reply (including Unmuted vs Muted archiving logic)
-      setChats((prev) =>
-        prev.map((c) => {
-          if (c.id === activeId) {
-            // Unmuted chats auto-unarchive on new incoming message!
-            // Muted chats stay archived!
-            const shouldUnarchive = c.archived && !c.muted;
-            return {
-              ...c,
-              last: replyText,
-              time: replyTime,
-              archived: shouldUnarchive ? false : c.archived,
-            };
+      // Update room state on incoming reply (Unmuted vs Muted archive behaviour)
+      let popped = false;
+      let poppedName = '';
+
+      setChats((prev) => {
+        const next = prev.map((c) => {
+          if (c.id !== activeId) return c;
+
+          // An unmuted archived chat escapes the archive on a new message.
+          // A muted one stays locked inside and only bumps the archive counter.
+          const shouldUnarchive = !!c.archived && !c.muted;
+          if (shouldUnarchive) {
+            popped = true;
+            poppedName = c.name;
           }
-          return c;
-        })
-      );
+          return {
+            ...c,
+            last: replyText,
+            time: replyTime,
+            archived: shouldUnarchive ? false : c.archived,
+            archivedPinned: shouldUnarchive ? false : c.archivedPinned,
+            // Muted archived chats accrue unread silently.
+            unread: c.archived && c.muted ? (c.unread || 0) + 1 : c.unread,
+          };
+        });
+
+        // An unarchived chat moves back to the top of the main list.
+        if (popped) {
+          const idx = next.findIndex((c) => c.id === activeId);
+          if (idx > -1) {
+            const [row] = next.splice(idx, 1);
+            next.unshift(row);
+          }
+        }
+        return next;
+      });
+
+      if (popped) {
+        showToast(`${poppedName} moved out of Archive — new message`);
+      }
     }, 2800);
   };
 
@@ -546,8 +569,91 @@ export default function App() {
   };
 
   const handleToggleArchive = (id: string) => {
-    setChats((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c))
+    setChats((prev) => {
+      const next = prev.map((c) => {
+        if (c.id !== id) return c;
+        const nowArchived = !c.archived;
+        return {
+          ...c,
+          archived: nowArchived,
+          // Archiving a chat drops its main-list pin; unarchiving drops its archive pin.
+          pinned: nowArchived ? false : c.pinned,
+          archivedPinned: nowArchived ? c.archivedPinned : false,
+        };
+      });
+
+      // Unarchived chats return to the top of the main list.
+      const row = next.find((c) => c.id === id);
+      if (row && !row.archived) {
+        const idx = next.findIndex((c) => c.id === id);
+        next.splice(idx, 1);
+        next.unshift(row);
+      }
+      return next;
+    });
+
+    // Leaving the archived thread open would strand the user on a hidden chat.
+    if (activeId === id) setActiveId(null);
+  };
+
+  const handleUnarchiveAll = () => {
+    const count = chats.filter((c) => c.archived).length;
+    if (count === 0) {
+      showToast('Archive is already empty');
+      return;
+    }
+    setChats((prev) => prev.map((c) => (c.archived ? { ...c, archived: false, archivedPinned: false } : c)));
+    showToast(`Unarchived ${count} chat${count > 1 ? 's' : ''}`);
+  };
+
+  const handleMarkArchivedRead = () => {
+    const count = chats.filter((c) => c.archived && (c.unread || 0) > 0).length;
+    if (count === 0) {
+      showToast('No unread chats in Archive');
+      return;
+    }
+    setChats((prev) => prev.map((c) => (c.archived ? { ...c, unread: 0 } : c)));
+    showToast(`Marked ${count} archived chat${count > 1 ? 's' : ''} as read`);
+  };
+
+  const handleOpenArchiveSettings = () => {
+    setDrawerMode('settings');
+    setDrawerOpen(true);
+    showToast('Archive settings — see Privacy');
+  };
+
+  // Simulates an inbound message from a non-contact so the
+  // "Auto-Archive Unknown Senders" privacy rule can be observed.
+  const handleSimulateUnknownSender = () => {
+    const stamp = Date.now();
+    const id = `u${stamp}`;
+    const autoArchive = !!advSettings.autoArchiveUnknown;
+    const name = `+256 78${String(stamp).slice(-6)}`;
+    const text = 'Hello, you have won a promotional airtime bonus. Reply YES to claim.';
+    const time = getCurrentTimeString();
+
+    const room: ChatRoom = {
+      id,
+      name,
+      avatar: '',
+      online: false,
+      unread: 1,
+      pinned: false,
+      isUnknownSender: true,
+      // The setting both mutes and archives non-contacts.
+      muted: autoArchive,
+      archived: autoArchive,
+      last: text,
+      time,
+    };
+
+    setMessages((prev) => ({ ...prev, [id]: [{ from: 'them', type: 'text', text, time }] }));
+    setChats((prev) => (autoArchive ? [...prev, room] : [room, ...prev]));
+
+    showToast(
+      autoArchive
+        ? `Unknown sender ${name} auto-archived and muted`
+        : `New message from unknown sender ${name}`
     );
   };
 
@@ -607,6 +713,10 @@ export default function App() {
         onToggleMute={handleToggleMute}
         onTogglePin={handleTogglePin}
         onToggleArchivePin={handleToggleArchivePin}
+        onUnarchiveAll={handleUnarchiveAll}
+        onMarkArchivedRead={handleMarkArchivedRead}
+        onOpenArchiveSettings={handleOpenArchiveSettings}
+        onSimulateUnknownSender={handleSimulateUnknownSender}
         onNewAction={() => {
           if (section === 'stories') {
             setIsStatusEditorOpen(true);

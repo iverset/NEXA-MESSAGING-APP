@@ -493,6 +493,24 @@ input, textarea {
   flex: 1;
   overflow-y: auto;
   padding: 2px 8px 16px;
+  overscroll-behavior-y: contain;
+}
+
+@keyframes snackIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Swipe gesture rows must not start a native text selection mid-drag */
+.swipe-host {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .list-item {
