@@ -13,6 +13,7 @@ function renderAvatar(avatarStr?: string, nameStr?: string) {
       <img
         src={avatarStr}
         alt={nameStr || 'Avatar'}
+        referrerPolicy="no-referrer"
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
     );

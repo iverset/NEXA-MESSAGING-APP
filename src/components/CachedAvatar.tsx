@@ -62,112 +62,37 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = React.memo(({
   alt,
   showOnlineBadge = false,
   isOnline = false,
-  lazy = true,
+  lazy = false,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Compute optimized URL
-  const optimizedUrl = useMemo(() => {
+  const avatarUrl = useMemo(() => {
     if (!src || (!src.startsWith('http') && !src.startsWith('data:'))) {
       return null;
     }
     return optimizeCdnImageUrl(src, size);
   }, [src, size]);
 
-  // Synchronous initial state check to prevent flash of unstyled content/initials if already in cache
-  const initialCached = useMemo(() => {
-    if (!optimizedUrl) return null;
-    return getCachedImageUrl(optimizedUrl) || (isImageCached(optimizedUrl) ? optimizedUrl : null);
-  }, [optimizedUrl]);
+  // Reset state on src change
+  useEffect(() => {
+    setHasError(false);
+    setIsLoaded(false);
+  }, [src]);
 
-  const [displaySrc, setDisplaySrc] = useState<string | null>(initialCached);
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>(
-    initialCached ? 'loaded' : optimizedUrl ? 'loading' : 'error'
-  );
-  const [isVisible, setIsVisible] = useState<boolean>(!lazy || Boolean(initialCached));
-
-  // Memoized Initials & Background
   const initialsText = useMemo(() => getInitials(name), [name]);
   const bgGradient = useMemo(() => getInitialsBgGradient(name), [name]);
 
-  // Intersection Observer for lazy loading when scrolling long chat lists
-  useEffect(() => {
-    if (!lazy || isVisible || !containerRef.current) return;
-
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              setIsVisible(true);
-              observer.disconnect();
-            }
-          });
-        },
-        { rootMargin: '100px' }
-      );
-      observer.observe(containerRef.current);
-      return () => observer.disconnect();
-    } else {
-      setIsVisible(true);
-    }
-  }, [lazy, isVisible]);
-
-  // Preload & Cache Image effect when element becomes visible
-  useEffect(() => {
-    if (!optimizedUrl) {
-      setStatus('error');
-      setDisplaySrc(null);
-      return;
-    }
-
-    // If already loaded in state matching optimizedUrl, noop
-    if (displaySrc === optimizedUrl && status === 'loaded') {
-      return;
-    }
-
-    let isSubscribed = true;
-
-    if (isVisible) {
-      if (isImageCached(optimizedUrl)) {
-        setDisplaySrc(optimizedUrl);
-        setStatus('loaded');
-      } else {
-        setStatus('loading');
-        preloadImage(optimizedUrl, size)
-          .then((cachedUrl) => {
-            if (isSubscribed) {
-              setDisplaySrc(cachedUrl);
-              setStatus('loaded');
-            }
-          })
-          .catch(() => {
-            if (isSubscribed) {
-              setStatus('error');
-              setDisplaySrc(null);
-            }
-          });
-      }
-    }
-
-    return () => {
-      isSubscribed = false;
-    };
-  }, [optimizedUrl, isVisible, size, displaySrc, status]);
-
-  // Handle click callback safely
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
-      if (onClick) {
-        onClick(e);
-      }
+      if (onClick) onClick(e);
     },
     [onClick]
   );
 
   return (
     <div
-      ref={containerRef}
       className={`cached-avatar-container ${className}`}
       onClick={handleClick}
       style={{
@@ -181,51 +106,59 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = React.memo(({
         overflow: 'hidden',
         flexShrink: 0,
         userSelect: 'none',
-        background: status === 'loaded' ? 'transparent' : bgGradient,
+        background: bgGradient,
         color: '#ffffff',
         fontWeight: 700,
         fontSize: `${Math.max(12, Math.round(size * 0.38))}px`,
         cursor: onClick ? 'pointer' : 'default',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        boxShadow: 'none',
+        border: 'none',
         ...style,
       }}
     >
-      {status === 'loaded' && displaySrc ? (
-        <img
-          src={displaySrc}
-          alt={alt || name || 'Avatar'}
-          loading="lazy"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            borderRadius: '50%',
-            transition: 'opacity 0.2s ease-in-out',
-            opacity: 1,
-          }}
-          onError={() => setStatus('error')}
-        />
-      ) : (
+      {/* Background Initials (Visible when image is loading or errors) */}
+      {!isLoaded && (
         <span style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {initialsText}
         </span>
       )}
 
-      {showOnlineBadge && (
+      {/* Primary Image */}
+      {avatarUrl && !hasError && (
+        <img
+          src={avatarUrl}
+          alt={alt || name || 'Avatar'}
+          loading={lazy ? 'lazy' : 'eager'}
+          referrerPolicy="no-referrer"
+          onLoad={() => setIsLoaded(true)}
+          onError={() => setHasError(true)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            borderRadius: '50%',
+            transition: 'opacity 0.2s ease-in-out',
+            opacity: isLoaded ? 1 : 0,
+          }}
+        />
+      )}
+
+      {/* Optional Online Badge */}
+      {showOnlineBadge && isOnline && (
         <span
           style={{
             position: 'absolute',
             bottom: '2px',
             right: '2px',
-            width: `${Math.max(10, Math.round(size * 0.22))}px`,
-            height: `${Math.max(10, Math.round(size * 0.22))}px`,
+            width: `${Math.max(8, Math.round(size * 0.22))}px`,
+            height: `${Math.max(8, Math.round(size * 0.22))}px`,
             borderRadius: '50%',
-            background: isOnline ? '#00A884' : '#8696a0',
-            border: '2px solid #111b21',
-            boxShadow: '0 0 4px rgba(0,0,0,0.5)',
+            background: '#00A884',
+            border: '2px solid #0A0D16',
+            zIndex: 3,
           }}
-          title={isOnline ? 'Online' : 'Offline'}
         />
       )}
     </div>

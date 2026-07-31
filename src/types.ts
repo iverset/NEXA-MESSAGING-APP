@@ -12,12 +12,15 @@ export type AppSection = 'chats' | 'groups' | 'channels' | 'communities' | 'mail
 
 export type MailFolder = 'inbox' | 'sent' | 'drafts' | 'spam' | 'trash';
 
-export type MessageStatus = 'sent' | 'delivered' | 'read';
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
 
 export interface ChatRoom {
   id: string;
   name: string;
   avatar: string;
+  username?: string;
+  phone?: string;
+  bio?: string;
   online?: boolean;
   unread?: number;
   pinned?: boolean;
@@ -33,11 +36,35 @@ export interface ChatRoom {
   groups?: number;
   channels?: number;
   desc?: string;
+  privacySettings?: {
+    findMeByPhone?: 'everyone' | 'contacts' | 'nobody';
+    findMeByUsername?: 'everyone' | 'contacts' | 'nobody';
+  };
+}
+
+export interface ChatMessageReaction {
+  emoji: string;
+  count: number;
+  userReacted?: boolean;
 }
 
 export interface ChatMessage {
+  id?: string;
   from: 'me' | 'them';
-  type: 'text' | 'sticker' | 'doc' | 'voice' | 'location' | 'contact' | 'poll' | 'sketch';
+  type:
+    | 'text'
+    | 'sticker'
+    | 'doc'
+    | 'voice'
+    | 'location'
+    | 'contact'
+    | 'poll'
+    | 'sketch'
+    | 'photo'
+    | 'video'
+    | 'audio'
+    | 'video_note'
+    | 'system';
   text?: string;
   time: string;
   status?: MessageStatus;
@@ -49,10 +76,23 @@ export interface ChatMessage {
   cname?: string;
   cphone?: string;
   question?: string;
-  options?: [string, number][];
+  options?: [string, number][]; // [optionLabel, votePercentageOrCount]
+  userVotedOption?: number;
+  totalVotes?: number;
+  isQuiz?: boolean;
+  correctOptionIndex?: number;
   avatar?: string;
-  reactions?: string[];
+  reactions?: (ChatMessageReaction | string)[];
   replyText?: string;
+  replyMessageId?: string;
+  replySenderName?: string;
+  forwardedFrom?: string;
+  mediaUrl?: string;
+  thumbnailUrl?: string;
+  isEdited?: boolean;
+  isPinned?: boolean;
+  senderName?: string;
+  senderColor?: string;
   stickerData?: {
     name: string;
     animatedSvg?: string;

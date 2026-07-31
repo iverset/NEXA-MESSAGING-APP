@@ -17,11 +17,11 @@ export function getPaletteGrad(i: number): string {
 }
 
 export const INITIAL_CHATS: ChatRoom[] = [
-  { id: 'c1', name: 'Kato Mukasa', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=75', online: true, unread: 2, pinned: true, muted: false, last: 'Oli otya! Sent the files, check inbox', time: '09:41' },
-  { id: 'c2', name: 'Babirye Kintu', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=120&q=75', online: false, unread: 0, pinned: false, muted: true, last: '🎤 Voice message (0:42) - Ki gano Mukwano!', time: '08:12' },
-  { id: 'c3', name: 'Ssemwanga Ronald', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'That sketch of the Buganda motif looks great!', time: 'Yesterday' },
-  { id: 'c4', name: 'Namubiru Sarah', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=75', online: false, unread: 5, pinned: false, muted: false, last: '📍 Live location shared · Kampala Road', time: 'Yesterday' },
-  { id: 'c5', name: 'Kizza Aloysius', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'Poll: Pick the launch date for Kampala App', time: 'Mon' },
+  { id: 'c1', name: 'Kato Mukasa', username: 'kato_mukasa', phone: '+256 752 111222', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=75', online: true, unread: 2, pinned: true, muted: false, last: 'Oli otya! Sent the files, check inbox', time: '09:41' },
+  { id: 'c2', name: 'Babirye Kintu', username: 'babirye_kintu', phone: '+256 772 333444', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=120&q=75', online: false, unread: 0, pinned: false, muted: true, last: '🎤 Voice message (0:42) - Ki gano Mukwano!', time: '08:12' },
+  { id: 'c3', name: 'Ssemwanga Ronald', username: 'ronald_ssemwanga', phone: '+256 701 555666', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'That sketch of the Buganda motif looks great!', time: 'Yesterday' },
+  { id: 'c4', name: 'Namubiru Sarah', username: 'sarah_namubiru', phone: '+256 782 777888', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=75', online: false, unread: 5, pinned: false, muted: false, last: '📍 Live location shared · Kampala Road', time: 'Yesterday' },
+  { id: 'c5', name: 'Kizza Aloysius', username: 'kizza_aloysius', phone: '+256 755 999000', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'Poll: Pick the launch date for Kampala App', time: 'Mon' },
 ];
 
 export const INITIAL_GROUPS: ChatRoom[] = [

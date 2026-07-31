@@ -13,22 +13,26 @@ const loadingPromises = new Map<string, Promise<string>>();
 export function optimizeCdnImageUrl(url?: string, size: number = 96): string {
   if (!url) return '';
 
-  // Unsplash CDN optimization
-  if (url.includes('images.unsplash.com')) {
-    const urlObj = new URL(url);
-    urlObj.searchParams.set('w', size.toString());
-    urlObj.searchParams.set('h', size.toString());
-    urlObj.searchParams.set('fit', 'crop');
-    urlObj.searchParams.set('auto', 'format');
-    urlObj.searchParams.set('q', '80');
-    return urlObj.toString();
-  }
+  try {
+    // Unsplash CDN optimization
+    if (url.includes('images.unsplash.com')) {
+      const urlObj = new URL(url);
+      urlObj.searchParams.set('w', Math.max(120, size * 2).toString());
+      urlObj.searchParams.set('h', Math.max(120, size * 2).toString());
+      urlObj.searchParams.set('fit', 'crop');
+      urlObj.searchParams.set('auto', 'format');
+      urlObj.searchParams.set('q', '85');
+      return urlObj.toString();
+    }
 
-  // DiceBear or SVG Avatar optimization
-  if (url.includes('api.dicebear.com')) {
-    const urlObj = new URL(url);
-    urlObj.searchParams.set('size', size.toString());
-    return urlObj.toString();
+    // DiceBear or SVG Avatar optimization
+    if (url.includes('api.dicebear.com')) {
+      const urlObj = new URL(url);
+      urlObj.searchParams.set('size', Math.max(120, size * 2).toString());
+      return urlObj.toString();
+    }
+  } catch {
+    return url;
   }
 
   return url;
@@ -69,7 +73,6 @@ export function preloadImage(url: string, size: number = 96): Promise<string> {
 
   const promise = new Promise<string>((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
     img.src = optimized;
 
     img.onload = () => {
@@ -79,18 +82,8 @@ export function preloadImage(url: string, size: number = 96): Promise<string> {
     };
 
     img.onerror = (err) => {
-      // Fallback without crossOrigin if CORS failed
-      const fallbackImg = new Image();
-      fallbackImg.src = optimized;
-      fallbackImg.onload = () => {
-        imageMemoryCache.set(optimized, optimized);
-        loadingPromises.delete(optimized);
-        resolve(optimized);
-      };
-      fallbackImg.onerror = () => {
-        loadingPromises.delete(optimized);
-        reject(err);
-      };
+      loadingPromises.delete(optimized);
+      reject(err);
     };
   });
 

@@ -15,12 +15,13 @@ import { RailNav } from './components/RailNav';
 import { ListPanel } from './components/ListPanel';
 import { ChatPanel } from './components/ChatPanel';
 import { Drawer } from './components/Drawer';
-import { Toast } from './components/Toast';
+import { Toast, ToastState } from './components/Toast';
 import { FontSelectorModal } from './components/FontSelectorModal';
 import { StatusEditorModal } from './components/StatusEditorModal';
 import { StatusViewerModal } from './components/StatusViewerModal';
 import { ProfilePreviewModal, ProfilePreviewTarget } from './components/ProfilePreviewModal';
 import { WallpaperPickerModal } from './components/WallpaperPickerModal';
+import { OnboardingAuthScreen } from './components/OnboardingAuthScreen';
 import { FONT_CATALOG, loadGoogleFont } from './data/fontsCatalog';
 import { translateText } from './services/translator';
 
@@ -95,10 +96,14 @@ export default function App() {
   const [bubbleRadius, setBubbleRadius] = useState<number>(16);
   const [fontScale, setFontScale] = useState<number>(1);
   const [isFontModalOpen, setIsFontModalOpen] = useState<boolean>(false);
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => localStorage.getItem('nexa_is_authenticated') === 'true');
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => localStorage.getItem('nexa_is_authenticated') !== 'true');
+  const [onboardingStage, setOnboardingStage] = useState<'splash' | 'intro' | 'get_started' | 'signin' | 'otp' | 'profile_setup'>('splash');
   const [toggleStates, setToggleStates] = useState<Record<string, boolean>>({});
   const [selectedRadioStates, setSelectedRadioStates] = useState<Record<string, number>>({});
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastState, setToastState] = useState<ToastState | string | null>(null);
 
   useEffect(() => {
     document.body.setAttribute('data-theme', currentTheme);
@@ -218,11 +223,50 @@ export default function App() {
     setDpPreviewInitialMode('fullscreen');
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
+  const handleStartDeveloperChat = () => {
+    setDrawerOpen(false);
+    const devChatId = 'dev_team_chat';
+    const existing = chats.find((c) => c.id === devChatId);
+    if (!existing) {
+      const newDevRoom = {
+        id: devChatId,
+        name: 'The Great Minds (Developers)',
+        time: 'Just now',
+        snippet: 'Welcome to NEXA Developer Support! How can we help you?',
+        unread: 0,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        type: 'direct' as const,
+        online: true,
+        lastSeen: 'Online',
+        about: 'Lead Developers of NEXA App (hpro453176@gmail.com)',
+      };
+      setChats((prev) => [newDevRoom, ...prev]);
+      setMessages((prev) => ({
+        ...prev,
+        [devChatId]: [
+          {
+            id: 'dev_m1',
+            sender: 'The Great Minds (Developers)',
+            text: 'Hello! You are directly connected with The Great Minds development team (Lead email: hpro453176@gmail.com). How can we assist you today with NEXA App?',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'read' as const,
+          },
+        ],
+      }));
+    }
+    setActiveId(devChatId);
+    showToast('Connected to NEXA Developer Support');
+  };
+
+  const showToast = (msg: string | ToastState, actionLabel?: string, onAction?: () => void) => {
+    if (typeof msg === 'string') {
+      setToastState({ message: msg, actionLabel, onAction });
+    } else {
+      setToastState(msg);
+    }
     setTimeout(() => {
-      setToastMessage(null);
-    }, 2200);
+      setToastState(null);
+    }, 3500);
   };
 
   const handlePostStatus = (newItem: StatusItem) => {
@@ -546,9 +590,46 @@ export default function App() {
   };
 
   const handleToggleArchive = (id: string) => {
+    let chatName = '';
+    let isCurrentlyArchived = false;
+
+    setChats((prev) => {
+      const chat = prev.find((c) => c.id === id);
+      if (chat) {
+        chatName = chat.name;
+        isCurrentlyArchived = !!chat.archived;
+      }
+      return prev.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c));
+    });
+
+    if (isCurrentlyArchived) {
+      showToast(`Unarchived ${chatName || 'chat'}`, 'UNDO', () => handleToggleArchive(id));
+    } else {
+      showToast('Chat Archived', 'UNDO', () => handleToggleArchive(id));
+    }
+  };
+
+  const handleUnarchiveAllChats = () => {
+    const archivedIds: string[] = [];
+    setChats((prev) => {
+      prev.forEach((c) => {
+        if (c.archived) archivedIds.push(c.id);
+      });
+      return prev.map((c) => ({ ...c, archived: false }));
+    });
+
+    showToast('All chats unarchived', 'UNDO', () => {
+      setChats((prev) =>
+        prev.map((c) => (archivedIds.includes(c.id) ? { ...c, archived: true } : c))
+      );
+    });
+  };
+
+  const handleMarkAllArchivedRead = () => {
     setChats((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c))
+      prev.map((c) => (c.archived ? { ...c, unread: 0 } : c))
     );
+    showToast('All archived messages marked as read');
   };
 
   const handleToggleMute = (id: string) => {
@@ -567,6 +648,53 @@ export default function App() {
     setChats((prev) =>
       prev.map((c) => (c.id === id ? { ...c, archivedPinned: !c.archivedPinned } : c))
     );
+  };
+
+  const handleBulkPinChats = (ids: string[]) => {
+    setChats((prev) =>
+      prev.map((c) => (ids.includes(c.id) ? { ...c, pinned: !c.pinned } : c))
+    );
+    showToast(`Updated pin status for ${ids.length} chat${ids.length > 1 ? 's' : ''}`);
+  };
+
+  const handleBulkMuteChats = (ids: string[]) => {
+    setChats((prev) =>
+      prev.map((c) => (ids.includes(c.id) ? { ...c, muted: !c.muted } : c))
+    );
+    showToast(`Updated mute status for ${ids.length} chat${ids.length > 1 ? 's' : ''}`);
+  };
+
+  const handleBulkArchiveChats = (ids: string[]) => {
+    setChats((prev) =>
+      prev.map((c) => (ids.includes(c.id) ? { ...c, archived: !c.archived } : c))
+    );
+    showToast(`Archived ${ids.length} chat${ids.length > 1 ? 's' : ''}`, 'UNDO', () => {
+      setChats((prev) =>
+        prev.map((c) => (ids.includes(c.id) ? { ...c, archived: !c.archived } : c))
+      );
+    });
+  };
+
+  const handleBulkDeleteChats = (ids: string[]) => {
+    const deletedChats = chats.filter((c) => ids.includes(c.id));
+    setChats((prev) => prev.filter((c) => !ids.includes(c.id)));
+    if (activeId && ids.includes(activeId)) {
+      setActiveId(null);
+    }
+    showToast(`Deleted ${ids.length} chat${ids.length > 1 ? 's' : ''}`, 'UNDO', () => {
+      setChats((prev) => [...prev, ...deletedChats]);
+    });
+  };
+
+  const handleBulkMarkReadChats = (ids: string[]) => {
+    setChats((prev) =>
+      prev.map((c) => (ids.includes(c.id) ? { ...c, unread: 0 } : c))
+    );
+    showToast(`Marked ${ids.length} chat${ids.length > 1 ? 's' : ''} as read`);
+  };
+
+  const handleBulkAddToFolder = (ids: string[], folderName: string) => {
+    showToast(`Added ${ids.length} chat${ids.length > 1 ? 's' : ''} to folder "${folderName}"`);
   };
 
   return (
@@ -598,6 +726,7 @@ export default function App() {
         communities={communities}
         mail={mail}
         stories={stories}
+        messages={messages}
         activeId={activeId}
         activeMailFolder={activeMailFolder}
         interfaceLang={advSettings.interfaceLanguage || 'en'}
@@ -607,6 +736,18 @@ export default function App() {
         onToggleMute={handleToggleMute}
         onTogglePin={handleTogglePin}
         onToggleArchivePin={handleToggleArchivePin}
+        onUnarchiveAll={handleUnarchiveAllChats}
+        onMarkAllArchivedRead={handleMarkAllArchivedRead}
+        onBulkPinChats={handleBulkPinChats}
+        onBulkMuteChats={handleBulkMuteChats}
+        onBulkArchiveChats={handleBulkArchiveChats}
+        onBulkDeleteChats={handleBulkDeleteChats}
+        onBulkMarkReadChats={handleBulkMarkReadChats}
+        onBulkAddToFolder={handleBulkAddToFolder}
+        onOpenArchiveSettings={() => {
+          setDrawerMode('settings');
+          setDrawerOpen(true);
+        }}
         onNewAction={() => {
           if (section === 'stories') {
             setIsStatusEditorOpen(true);
@@ -680,7 +821,48 @@ export default function App() {
         onOpenFontSelector={() => setIsFontModalOpen(true)}
         onOpenWallpaperPicker={() => setIsWallpaperModalOpen(true)}
         onOpenFullScreenDp={handleOpenFullScreenDp}
+        onStartDeveloperChat={handleStartDeveloperChat}
+        onOpenOnboarding={(stg) => {
+          setOnboardingStage(stg || 'splash');
+          setShowOnboarding(true);
+        }}
+        onLogout={() => {
+          localStorage.removeItem('nexa_is_authenticated');
+          setIsAuthenticated(false);
+          setOnboardingStage('splash');
+          setShowOnboarding(true);
+          showToast('Logged out of Nexa account successfully');
+        }}
       />
+
+      {/* Telegram-Style Splash & Onboarding Auth Screen */}
+      {(!isAuthenticated || showOnboarding) && (
+        <OnboardingAuthScreen
+          initialStage={onboardingStage}
+          isAuthenticated={isAuthenticated}
+          onCompleteAuth={(userData) => {
+            setIsAuthenticated(true);
+            setShowOnboarding(false);
+            localStorage.setItem('nexa_is_authenticated', 'true');
+            if (userData.name) {
+              setProfile((prev) => ({
+                ...prev,
+                name: userData.name,
+                username: userData.username || prev.username,
+                phone: userData.phone || prev.phone,
+                ...(userData.avatarUrl
+                  ? {
+                      avatars: [{ id: `custom_${Date.now()}`, url: userData.avatarUrl, name: 'Custom Photo' }, ...prev.avatars],
+                      activeAvatarId: `custom_${Date.now()}`,
+                    }
+                  : {}),
+              }));
+            }
+          }}
+          onToast={showToast}
+          onClose={isAuthenticated ? () => setShowOnboarding(false) : undefined}
+        />
+      )}
 
       {/* Global Wallpaper Picker Triggered from Settings */}
       {isWallpaperModalOpen && (
@@ -755,7 +937,7 @@ export default function App() {
         />
       )}
 
-      <Toast message={toastMessage} />
+      <Toast toast={toastState} onDismiss={() => setToastState(null)} />
     </div>
   );
 }
