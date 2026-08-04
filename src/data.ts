@@ -17,6 +17,7 @@ export function getPaletteGrad(i: number): string {
 }
 
 export const INITIAL_CHATS: ChatRoom[] = [
+  { id: 'greatminds_ai', name: 'Great Minds AI', username: 'greatminds', phone: 'Official AI', avatar: 'greatminds_ai', online: true, unread: 0, pinned: true, muted: false, last: '✨ Hello! Ask me anything, type /imagine, or mention @Great Minds AI in group chats.', time: 'Just now', desc: 'Official AI Assistant by The Great Minds' },
   { id: 'c1', name: 'Kato Mukasa', username: 'kato_mukasa', phone: '+256 752 111222', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=75', online: true, unread: 2, pinned: true, muted: false, last: 'Oli otya! Sent the files, check inbox', time: '09:41' },
   { id: 'c2', name: 'Babirye Kintu', username: 'babirye_kintu', phone: '+256 772 333444', avatar: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=120&q=75', online: false, unread: 0, pinned: false, muted: true, last: '🎤 Voice message (0:42) - Ki gano Mukwano!', time: '08:12' },
   { id: 'c3', name: 'Ssemwanga Ronald', username: 'ronald_ssemwanga', phone: '+256 701 555666', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=75', online: true, unread: 0, pinned: false, muted: false, last: 'That sketch of the Buganda motif looks great!', time: 'Yesterday' },
@@ -180,6 +181,9 @@ export const INITIAL_STORIES: Story[] = [
 ];
 
 export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {
+  greatminds_ai: [
+    { from: 'them', type: 'text', text: '✨ **Welcome to Great Minds AI!**\n\nI am your official AI Assistant built by The Great Minds. I am integrated across NEXA\'s search bar, group chats, and voice mode.\n\nTry asking me:\n• "What can you do?"\n• "Summarize recent chats"\n• "/imagine A high-tech Kampala city at night"\n• Mention `@Great Minds AI` in any group chat!', time: 'Just now' },
+  ],
   c1: [
     { from: 'them', type: 'text', text: 'Oli otya bro! Quick one before the team call.', time: '09:10' },
     { from: 'them', type: 'text', text: 'Can you send over the updated Kampala App tokens?', time: '09:11' },

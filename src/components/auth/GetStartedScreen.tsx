@@ -11,17 +11,12 @@ export const GetStartedScreen: React.FC<GetStartedScreenProps> = ({
 }) => {
   return (
     <div className="nexa-auth-card">
-      <div className="nexa-auth-logo-icon">
-        <svg viewBox="0 0 40 40" fill="none" style={{ width: '32px', height: '32px' }}>
-          <path
-            d="M10 30V10L30 30V10"
-            stroke="#ffffff"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="30" cy="9" r="2.5" fill="#ffffff" />
-        </svg>
+      <div className="nexa-auth-logo-icon" style={{ overflow: 'hidden', border: '1px solid rgba(0, 240, 255, 0.4)' }}>
+        <img
+          src="/images/app_ai_icon.jpg"
+          alt="NEXA Logo"
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
       </div>
 
       <h1 className="nexa-auth-title">Let's get you connected</h1>

@@ -13,6 +13,8 @@ import { PinnedMessagesModal } from './PinnedMessagesModal';
 import { MessageInfoModal } from './MessageInfoModal';
 import { CachedAvatar } from './CachedAvatar';
 import { TelegramMessageBubble } from './TelegramMessageBubble';
+import { GreatMindsRing } from './GreatMindsRing';
+const defaultGreatMindsBg = '/images/greatminds_chat_bg.jpg';
 
 interface ChatPanelProps {
   activeRoom: ChatRoom | null;
@@ -42,6 +44,7 @@ interface ChatPanelProps {
   onMuteRoom?: (duration: string) => void;
   onSetDisappearingTimer?: (timer: string) => void;
   onUnfollowChannel?: () => void;
+  onOpenVoiceModal?: () => void;
   isHiddenOnMobile: boolean;
 }
 
@@ -73,6 +76,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onMuteRoom,
   onSetDisappearingTimer,
   onUnfollowChannel,
+  onOpenVoiceModal,
   isHiddenOnMobile,
 }) => {
   // Input & Messaging States
@@ -459,8 +463,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   // Custom wallpaper background style
-  const roomWallpaper = activeRoom.wallpaper || globalWallpaper;
-  const roomWallpaperDim = activeRoom.wallpaperDim ?? globalWallpaperDim;
+  const isGreatMinds = activeRoom.id === 'greatminds_ai' || activeRoom.name === 'Great Minds AI';
+  const roomWallpaper = isGreatMinds
+    ? (activeRoom.wallpaper || defaultGreatMindsBg)
+    : (activeRoom.wallpaper || globalWallpaper);
+  const roomWallpaperDim = isGreatMinds
+    ? (activeRoom.wallpaperDim ?? 78)
+    : (activeRoom.wallpaperDim ?? globalWallpaperDim);
 
   return (
     <div
@@ -570,6 +579,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         {/* Header Actions */}
         <div className="header-actions">
+          <button
+            className="panel-hdr-ic"
+            title="Great Minds AI Voice Mode"
+            aria-label="Great Minds AI Voice Mode"
+            onClick={() => {
+              if (onOpenVoiceModal) onOpenVoiceModal();
+              else onToast('Opening Great Minds AI Voice Mode...');
+            }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <GreatMindsRing size={20} animated glow />
+          </button>
+
           <button
             className="panel-hdr-ic"
             title="Search in Chat"
@@ -1129,6 +1151,39 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
                   </svg>
                 </button>
+
+                {/* Contextual @Great Minds AI Mention Trigger */}
+                {(inputText.includes('@') || activeRoom?.id === 'greatminds_ai') && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '68px',
+                      left: '16px',
+                      background: 'rgba(17, 27, 33, 0.95)',
+                      border: '1px solid rgba(0, 242, 254, 0.3)',
+                      borderRadius: '12px',
+                      padding: '8px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                      zIndex: 90,
+                      cursor: 'pointer',
+                      backdropFilter: 'blur(10px)',
+                    }}
+                    onClick={() => {
+                      if (!inputText.includes('@Great Minds AI')) {
+                        setInputText((prev) => (prev ? `${prev} @Great Minds AI ` : '@Great Minds AI '));
+                      }
+                    }}
+                  >
+                    <GreatMindsRing size={20} animated glow />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>@Great Minds AI</div>
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>Tag AI to answer, translate, or summarize in this chat</div>
+                    </div>
+                  </div>
+                )}
 
                 <input
                   type="text"

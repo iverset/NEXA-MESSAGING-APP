@@ -3,6 +3,7 @@ import { AppSection, ChatRoom, ChatMessage, MailFolder, MailItem, Story } from '
 import { getPaletteGrad } from '../data';
 import { getUIText } from '../services/translator';
 import { CachedAvatar } from './CachedAvatar';
+import { GreatMindsRing } from './GreatMindsRing';
 import { batchPreloadAvatars } from '../services/ImageCacheService';
 import {
   Archive,
@@ -64,6 +65,8 @@ interface ListPanelProps {
   onCreateStatus?: () => void;
   onPreviewDp?: (target: { id?: string | number; name: string; avatar?: string }) => void;
   showStoryTrayInChats?: boolean;
+  onAskGreatMindsAI?: (query: string) => void;
+  onOpenGreatMindsVoiceModal?: () => void;
   onToast: (msg: string) => void;
   isHiddenOnMobile: boolean;
 }
@@ -379,6 +382,8 @@ export const ListPanel: React.FC<ListPanelProps> = ({
   onCreateStatus,
   onPreviewDp,
   showStoryTrayInChats = true,
+  onAskGreatMindsAI,
+  onOpenGreatMindsVoiceModal,
   onOpenAuthModal,
   onToast,
   isHiddenOnMobile,
@@ -869,15 +874,131 @@ export const ListPanel: React.FC<ListPanelProps> = ({
         </div>
       )}
 
-      {/* Search Input */}
+      {/* Dual-Purpose Global Search Bar with Meta AI / Great Minds AI Integration */}
       {!isMultiSelectMode && (
-        <div className="search">
-          <Search size={16} style={{ color: 'var(--text-1)' }} />
-          <input
-            placeholder={viewingArchiveView ? 'Search archived chats...' : getUIText('search', interfaceLang)}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div style={{ padding: '0 10px', marginBottom: '8px' }}>
+          <div className="search" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={16} style={{ color: 'var(--text-1)', flexShrink: 0 }} />
+            <input
+              placeholder={viewingArchiveView ? 'Search archived chats...' : 'Search chats or ask Great Minds AI...'}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && search.trim()) {
+                  if (onAskGreatMindsAI) {
+                    onAskGreatMindsAI(search.trim());
+                    setSearch('');
+                  } else {
+                    onSelectChat('greatminds_ai');
+                  }
+                }
+              }}
+              style={{ flex: 1, paddingRight: '36px' }}
+            />
+            <div
+              style={{ position: 'absolute', right: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              onClick={() => {
+                if (search.trim() && onAskGreatMindsAI) {
+                  onAskGreatMindsAI(search.trim());
+                  setSearch('');
+                } else {
+                  onSelectChat('greatminds_ai');
+                }
+              }}
+              title="Ask Great Minds AI"
+              aria-label="Ask Great Minds AI"
+            >
+              <GreatMindsRing size={22} animated glow />
+            </div>
+          </div>
+
+          {/* Quick AI Prompt Suggestions when typing search */}
+          {search.trim().length > 0 && (
+            <div
+              style={{
+                marginTop: '6px',
+                background: 'var(--bg-1, #111b21)',
+                border: '1px solid var(--border, rgba(255,255,255,0.12))',
+                borderRadius: '12px',
+                padding: '8px 10px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+              }}
+            >
+              <div
+                onClick={() => {
+                  if (onAskGreatMindsAI) onAskGreatMindsAI(search);
+                  else onSelectChat('greatminds_ai');
+                  setSearch('');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 8px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  background: 'rgba(0, 242, 254, 0.08)',
+                }}
+              >
+                <GreatMindsRing size={18} animated glow />
+                <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-0)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Ask Great Minds AI: <span style={{ color: '#00F2FE' }}>"{search}"</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={() => {
+                    if (onAskGreatMindsAI) onAskGreatMindsAI(`/imagine ${search}`);
+                    else onSelectChat('greatminds_ai');
+                    setSearch('');
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    padding: '5px 8px',
+                    fontSize: '11.5px',
+                    color: 'var(--text-0)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    justifyContent: 'center',
+                  }}
+                >
+                  🎨 Imagine
+                </button>
+                <button
+                  onClick={() => {
+                    if (onAskGreatMindsAI) onAskGreatMindsAI(`Search web for ${search}`);
+                    else onSelectChat('greatminds_ai');
+                    setSearch('');
+                  }}
+                  style={{
+                    flex: 1,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '8px',
+                    padding: '5px 8px',
+                    fontSize: '11.5px',
+                    color: 'var(--text-0)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    justifyContent: 'center',
+                  }}
+                >
+                  🔍 Web Search
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1744,6 +1865,35 @@ export const ListPanel: React.FC<ListPanelProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* META AI STYLE FLOATING ACTION RING BUTTON - POSITIONED ABOVE ADD CHAT FAB */}
+      {section === 'chats' && !viewingArchiveView && !isMultiSelectMode && (
+        <button
+          onClick={() => onSelectChat('greatminds_ai')}
+          className="gm-floating-ai-fab"
+          style={{
+            position: 'absolute',
+            bottom: '86px',
+            right: '22px',
+            zIndex: 90,
+            width: '52px',
+            height: '52px',
+            borderRadius: '50%',
+            background: 'var(--bg-1, #111b21)',
+            border: '2px solid rgba(0, 242, 254, 0.5)',
+            boxShadow: '0 8px 24px rgba(0, 198, 255, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'transform 0.15s ease, box-shadow 0.15s ease, bottom 0.2s ease',
+          }}
+          title="Open Great Minds AI"
+          aria-label="Open Great Minds AI"
+        >
+          <GreatMindsRing size={38} animated glow />
+        </button>
       )}
     </div>
   );

@@ -1,12 +1,14 @@
 import React from 'react';
 import { AppSection } from '../types';
 import { getUIText } from '../services/translator';
+import { GreatMindsRing } from './GreatMindsRing';
 
 interface RailNavProps {
   activeSection: AppSection;
   onSelectSection: (sec: AppSection) => void;
   onOpenSettings: () => void;
   onOpenProfile: () => void;
+  onOpenGreatMindsAI?: () => void;
   userInitials: string;
   userAvatarUrl?: string;
   isHiddenOnMobile?: boolean;
@@ -53,6 +55,7 @@ export const RailNav: React.FC<RailNavProps> = ({
   onSelectSection,
   onOpenSettings,
   onOpenProfile,
+  onOpenGreatMindsAI,
   userInitials,
   userAvatarUrl,
   isHiddenOnMobile,
@@ -60,32 +63,21 @@ export const RailNav: React.FC<RailNavProps> = ({
 }) => {
   return (
     <div className={`rail ${isHiddenOnMobile ? 'hide-mobile' : ''}`}>
-      <div className="logo" title="NEXA Platform">
-        <svg viewBox="0 0 48 48" fill="none" style={{ filter: 'drop-shadow(0 0 6px rgba(0,240,255,0.7)) drop-shadow(0 0 10px rgba(180,38,255,0.6))' }}>
-          <defs>
-            <linearGradient id="neonNexaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#00F0FF" />
-              <stop offset="50%" stopColor="#9000FF" />
-              <stop offset="100%" stopColor="#D000FF" />
-            </linearGradient>
-          </defs>
-          {/* Chat box outer frame with open tail */}
-          <path
-            d="M 12 8 H 32 C 36 8 39 11 39 15 V 20 M 39 28 V 31 C 39 35 36 38 32 38 H 15 L 9 43 V 38 H 12 C 8 38 5 35 5 31 V 15 C 5 11 8 8 12 8 Z"
-            stroke="url(#neonNexaGrad)"
-            strokeWidth="2.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* Interlocking loop extending into right arrow */}
-          <path
-            d="M 11 25 C 11 19 18 17 22 22 L 26 26 C 30 31 37 29 37 23 H 29 C 27 23 25 21 23 18 L 19 14 C 15 10 9 13 9 18 C 9 22 13 25 17 25 H 41 L 35 19 M 41 25 L 35 31"
-            stroke="url(#neonNexaGrad)"
-            strokeWidth="2.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+      <div className="logo" title="NEXA Platform" onClick={() => onSelectSection('chats')}>
+        <img
+          src="/images/app_ai_icon.jpg"
+          alt="NEXA App Icon"
+          style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '11px',
+            objectFit: 'cover',
+            boxShadow: '0 0 14px rgba(0, 240, 255, 0.6), 0 0 8px rgba(0, 198, 255, 0.4)',
+            border: '1px solid rgba(0, 240, 255, 0.4)',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          }}
+        />
       </div>
 
       <div className="rail-nav">
@@ -105,6 +97,17 @@ export const RailNav: React.FC<RailNavProps> = ({
       </div>
 
       <div className="rail-bottom">
+        {onOpenGreatMindsAI && (
+          <div
+            className="rail-btn"
+            onClick={onOpenGreatMindsAI}
+            title="Great Minds AI"
+            aria-label="Great Minds AI"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <GreatMindsRing size={24} animated glow />
+          </div>
+        )}
         <div className="rail-btn" onClick={onOpenSettings} title={getUIText('settings', interfaceLang)}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <circle cx="12" cy="12" r="3"/>

@@ -10,6 +10,13 @@ export interface WallpaperOption {
 
 export const WALLPAPER_PRESETS: WallpaperOption[] = [
   {
+    id: 'greatminds_ai_brand',
+    name: 'Great Minds AI Smartphone',
+    category: 'presets',
+    background: 'url(/images/greatminds_chat_bg.jpg)',
+    previewCss: 'url(/images/greatminds_chat_bg.jpg) center/cover',
+  },
+  {
     id: 'whatsapp_dark_doodle',
     name: 'WhatsApp Dark Doodle',
     category: 'presets',

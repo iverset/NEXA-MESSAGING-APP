@@ -24,6 +24,8 @@ import { WallpaperPickerModal } from './components/WallpaperPickerModal';
 import { OnboardingAuthScreen } from './components/OnboardingAuthScreen';
 import { FONT_CATALOG, loadGoogleFont } from './data/fontsCatalog';
 import { translateText } from './services/translator';
+import { askGreatMindsAI } from './services/GreatMindsAIService';
+import { GreatMindsVoiceModal } from './components/GreatMindsVoiceModal';
 
 export default function App() {
   const [section, setSection] = useState<AppSection>('chats');
@@ -96,6 +98,7 @@ export default function App() {
   const [bubbleRadius, setBubbleRadius] = useState<number>(16);
   const [fontScale, setFontScale] = useState<number>(1);
   const [isFontModalOpen, setIsFontModalOpen] = useState<boolean>(false);
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState<boolean>(false);
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => localStorage.getItem('nexa_is_authenticated') === 'true');
   const [showOnboarding, setShowOnboarding] = useState<boolean>(() => localStorage.getItem('nexa_is_authenticated') !== 'true');
@@ -353,6 +356,12 @@ export default function App() {
     );
   };
 
+  const handleAskGreatMindsAI = (query: string) => {
+    setActiveId('greatminds_ai');
+    setSection('chats');
+    handleSendMessage(query);
+  };
+
   const getCurrentTimeString = (): string => {
     const now = new Date();
     return (
@@ -404,6 +413,51 @@ export default function App() {
     setChats(updateRoomLast);
     setGroups(updateRoomLast);
     setChannels(updateRoomLast);
+
+    // Handle Great Minds AI queries
+    const isGreatMindsQuery = activeId === 'greatminds_ai' || text.toLowerCase().includes('great minds ai') || text.toLowerCase().includes('@greatminds');
+
+    if (isGreatMindsQuery) {
+      setTimeout(async () => {
+        setIsTyping(true);
+        const currentMsgs = messages[activeId] || [];
+        const contextHistory = currentMsgs.slice(-6).map((m) => ({ sender: m.from === 'me' ? 'User' : 'Great Minds AI', text: m.text || '' }));
+        const aiRes = await askGreatMindsAI(text, contextHistory);
+        setIsTyping(false);
+
+        const replyTime = getCurrentTimeString();
+        const replyMsg: ChatMessage = {
+          from: 'them',
+          name: 'Great Minds AI',
+          avatar: 'greatminds_ai',
+          type: 'text',
+          text: aiRes.text,
+          time: replyTime,
+        };
+
+        setMessages((prev) => ({
+          ...prev,
+          [activeId]: [...(prev[activeId] || []), replyMsg],
+        }));
+
+        const updateRoomAI = (list: ChatRoom[]) =>
+          list.map((r) =>
+            r.id === activeId
+              ? {
+                  ...r,
+                  last: aiRes.text.replace(/[*#_`]/g, '').slice(0, 60),
+                  time: replyTime,
+                  unread: 0,
+                }
+              : r
+          );
+
+        setChats(updateRoomAI);
+        setGroups(updateRoomAI);
+      }, 1000);
+
+      return;
+    }
 
     // Simulate status transition: sent -> delivered -> read -> typing -> auto reply
     setTimeout(() => {
@@ -727,6 +781,7 @@ export default function App() {
           setDrawerMode('settings');
           setDrawerOpen(true);
         }}
+        onOpenGreatMindsAI={() => handleSelectChat('greatminds_ai')}
         userInitials={profile.name ? profile.name.slice(0, 2).toUpperCase() : 'YOU'}
         userAvatarUrl={
           (profile.avatars.find((a) => a.id === profile.activeAvatarId) || profile.avatars[0])?.url
@@ -776,6 +831,8 @@ export default function App() {
         onCreateStatus={() => setIsStatusEditorOpen(true)}
         onPreviewDp={handlePreviewDp}
         showStoryTrayInChats={advSettings.showStoryTrayInChats ?? true}
+        onAskGreatMindsAI={handleAskGreatMindsAI}
+        onOpenGreatMindsVoiceModal={() => setIsVoiceModalOpen(true)}
         onToast={showToast}
         isHiddenOnMobile={!!activeId}
       />
@@ -811,6 +868,7 @@ export default function App() {
         onMuteRoom={handleMuteRoom}
         onSetDisappearingTimer={handleSetDisappearingTimer}
         onUnfollowChannel={handleUnfollowChannel}
+        onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
         isHiddenOnMobile={!activeId}
       />
 
@@ -955,6 +1013,14 @@ export default function App() {
       )}
 
       <Toast toast={toastState} onDismiss={() => setToastState(null)} />
+
+      {/* Great Minds AI Voice Mode Modal */}
+      <GreatMindsVoiceModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onSendMessage={handleSendMessage}
+        onToast={showToast}
+      />
     </div>
   );
 }

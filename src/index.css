@@ -3168,5 +3168,40 @@ input, textarea {
   font-weight: 600;
 }
 
+/* GREAT MINDS AI - META AI STYLE ANIMATIONS AND STYLES */
+@keyframes gmSpinRing {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.04);
+  }
+}
+
+.great-minds-ring-wrapper.animated .gm-ring-path {
+  animation: gmSpinRing 8s linear infinite;
+  transform-origin: center;
+}
+
+.gm-floating-ai-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 10px 28px rgba(0, 198, 255, 0.5) !important;
+}
+
+.gm-floating-ai-fab:active {
+  transform: scale(0.95);
+}
+
 
 

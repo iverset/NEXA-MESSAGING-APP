@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { GreatMindsRing } from './GreatMindsRing';
 import {
   isImageCached,
   getCachedImageUrl,
@@ -67,6 +68,13 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = React.memo(({
   const [hasError, setHasError] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (onClick) onClick(e);
+    },
+    [onClick]
+  );
+
   // Compute optimized URL
   const avatarUrl = useMemo(() => {
     if (!src || (!src.startsWith('http') && !src.startsWith('data:'))) {
@@ -84,12 +92,14 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = React.memo(({
   const initialsText = useMemo(() => getInitials(name), [name]);
   const bgGradient = useMemo(() => getInitialsBgGradient(name), [name]);
 
-  const handleClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (onClick) onClick(e);
-    },
-    [onClick]
-  );
+  // If Great Minds AI avatar
+  if (src === 'greatminds_ai' || name === 'Great Minds AI') {
+    return (
+      <div className={`cached-avatar-container ${className}`} onClick={handleClick} style={{ width: `${size}px`, height: `${size}px`, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: onClick ? 'pointer' : 'default', ...style }}>
+        <GreatMindsRing size={size} animated glow />
+      </div>
+    );
+  }
 
   return (
     <div
