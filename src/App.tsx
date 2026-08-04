@@ -366,14 +366,30 @@ export default function App() {
     if (!activeId) return;
 
     const t = getCurrentTimeString();
-    const newMsg: ChatMessage = {
-      from: 'me',
-      type: 'text',
-      text,
-      time: t,
-      status: 'sent',
-      replyText: replyQuote,
-    };
+    const isVoice = text.startsWith('🎤 Voice Message');
+    let durStr = '0:18';
+    if (isVoice) {
+      const match = text.match(/\(([^)]+)\)/);
+      if (match) durStr = match[1];
+    }
+
+    const newMsg: ChatMessage = isVoice
+      ? {
+          from: 'me',
+          type: 'voice',
+          dur: durStr,
+          time: t,
+          status: 'sent',
+          replyText: replyQuote,
+        }
+      : {
+          from: 'me',
+          type: 'text',
+          text,
+          time: t,
+          status: 'sent',
+          replyText: replyQuote,
+        };
 
     setMessages((prev) => ({
       ...prev,
@@ -381,8 +397,9 @@ export default function App() {
     }));
 
     // Update room last message
+    const lastDisplay = isVoice ? `🎤 Voice message (${durStr})` : text;
     const updateRoomLast = (list: ChatRoom[]) =>
-      list.map((r) => (r.id === activeId ? { ...r, last: text, time: t } : r));
+      list.map((r) => (r.id === activeId ? { ...r, last: lastDisplay, time: t } : r));
 
     setChats(updateRoomLast);
     setGroups(updateRoomLast);

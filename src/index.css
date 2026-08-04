@@ -662,7 +662,47 @@ input, textarea {
 .header-actions {
   margin-left: auto;
   display: flex;
+  align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.panel-hdr {
+  height: 60px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-1, #111b21);
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.panel-hdr-ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-1, rgba(255, 255, 255, 0.75));
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.panel-hdr-ic:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-0, #ffffff);
+}
+
+.panel-hdr-ic:active {
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(0.94);
 }
 
 .icon-btn {
@@ -1747,11 +1787,23 @@ input, textarea {
   align-items: flex-end;
 }
 
+@keyframes tgMsgEntrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .tg-bubble-container {
   max-width: 82%;
   display: flex;
   flex-direction: column;
   position: relative;
+  animation: tgMsgEntrance 0.22s cubic-bezier(0.16, 1, 0.3, 1) ease-out;
 }
 
 @media (min-width: 768px) {
@@ -2544,6 +2596,66 @@ input, textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Hover Action Bar on Message Bubbles */
+.tg-bubble-container {
+  position: relative;
+}
+
+.tg-hover-actions {
+  position: absolute;
+  top: -16px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-2, #202c33);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  padding: 2px 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tg-msg-row.outgoing .tg-hover-actions {
+  right: auto;
+  left: 12px;
+}
+
+.tg-msg-row:hover .tg-hover-actions,
+.tg-bubble-container:hover .tg-hover-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.tg-hover-act-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.tg-hover-act-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.tg-hover-act-btn.is-active {
+  color: var(--accent-1, #00A884);
 }
 
 /* Telegram Context Menu Floating Popover */

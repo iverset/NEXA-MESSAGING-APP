@@ -17,10 +17,12 @@ import { AnimatedStickerItem } from '../types';
 export type { AnimatedStickerItem };
 
 interface EmojiPickerProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
-  onSelectStandardEmoji: (emojiChar: string) => void;
-  onSendAnimatedSticker: (sticker: AnimatedStickerItem) => void;
+  onSelectStandardEmoji?: (emojiChar: string) => void;
+  onSendAnimatedSticker?: (sticker: AnimatedStickerItem) => void;
+  onSelectEmoji?: (emojiChar: string) => void;
+  onSelectSticker?: (sticker: AnimatedStickerItem) => void;
 }
 
 const SKIN_TONES = [
@@ -35,10 +37,12 @@ const SKIN_TONES = [
 const LOCAL_STORAGE_RECENT_KEY = 'nexa_telegram_recent_emojis_v3';
 
 export const EmojiPicker: React.FC<EmojiPickerProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   onSelectStandardEmoji,
   onSendAnimatedSticker,
+  onSelectEmoji,
+  onSelectSticker,
 }) => {
   const [categories, setCategories] = useState<EmojiCategory[]>(DEFAULT_EMOJI_CATEGORIES);
   const [isLoadingMassiveData, setIsLoadingMassiveData] = useState<boolean>(true);
@@ -116,7 +120,8 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
 
   const handleEmojiClick = (emoji: EmojiItem) => {
     const fullChar = emoji.char + selectedSkinTone;
-    onSelectStandardEmoji(fullChar);
+    const fn = onSelectStandardEmoji || onSelectEmoji;
+    if (fn) fn(fullChar);
     saveRecentEmoji(emoji);
   };
 
@@ -752,7 +757,10 @@ export const EmojiPicker: React.FC<EmojiPickerProps> = ({
                 {filteredAnimatedStickers.map((stk) => (
                   <div
                     key={stk.id}
-                    onClick={() => onSendAnimatedSticker(stk)}
+                    onClick={() => {
+                      const fn = onSendAnimatedSticker || onSelectSticker;
+                      if (fn) fn(stk);
+                    }}
                     onMouseEnter={() =>
                       setHoveredItem({ name: stk.name, preview: stk.previewEmoji })
                     }

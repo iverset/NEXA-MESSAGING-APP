@@ -58,6 +58,13 @@ function isEmojiOnly(str?: string): boolean {
   return emojiRegex.test(trimmed);
 }
 
+// Extract first URL for smart link previews
+function extractFirstUrl(text?: string): string | null {
+  if (!text) return null;
+  const match = text.match(/https?:\/\/[^\s]+/i);
+  return match ? match[0] : null;
+}
+
 // Simple text parser for bold, italic, code, URLs, mentions, and hashtags
 function parseFormattedText(text: string) {
   if (!text) return null;
@@ -238,6 +245,26 @@ export const TelegramMessageBubble: React.FC<TelegramMessageBubbleProps> = ({
   const isSticker = message.type === 'sticker';
   const isEmojiOnlyMsg = message.type === 'text' && isEmojiOnly(message.text);
 
+  // Dynamic Bubble Corner Radii for grouped message clusters
+  const getBubbleCornerStyle = (): React.CSSProperties => {
+    if (isSticker || isEmojiOnlyMsg) return {};
+    if (mine) {
+      return {
+        borderTopRightRadius: isFirstInGroup ? '18px' : '6px',
+        borderBottomRightRadius: isLastInGroup ? '6px' : '18px',
+        borderTopLeftRadius: '18px',
+        borderBottomLeftRadius: '18px',
+      };
+    } else {
+      return {
+        borderTopLeftRadius: isFirstInGroup ? '18px' : '6px',
+        borderBottomLeftRadius: isLastInGroup ? '6px' : '18px',
+        borderTopRightRadius: '18px',
+        borderBottomRightRadius: '18px',
+      };
+    }
+  };
+
   return (
     <div
       className={`tg-msg-row ${mine ? 'outgoing' : 'incoming'} ${isFirstInGroup ? 'group-first' : ''} ${
@@ -301,10 +328,58 @@ export const TelegramMessageBubble: React.FC<TelegramMessageBubbleProps> = ({
 
       {/* Main Bubble Container */}
       <div className={`tg-bubble-container ${isSticker || isEmojiOnlyMsg ? 'bare-bubble' : ''}`}>
+        {/* HOVER QUICK ACTION BAR */}
+        {!isSelectionMode && (
+          <div className="tg-hover-actions">
+            <button
+              className="tg-hover-act-btn"
+              title="Reply"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReply?.(message);
+              }}
+            >
+              ↩
+            </button>
+            <button
+              className="tg-hover-act-btn"
+              title="React ❤️"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReact?.(msgIndex, '❤️');
+              }}
+            >
+              ❤️
+            </button>
+            <button
+              className={`tg-hover-act-btn ${message.isPinned ? 'is-active' : ''}`}
+              title={message.isPinned ? 'Unpin Message' : 'Pin Message'}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPin?.(message, msgIndex);
+                onToast?.(message.isPinned ? 'Message unpinned' : 'Message pinned 📌');
+              }}
+            >
+              📌
+            </button>
+            <button
+              className="tg-hover-act-btn"
+              title="More Options"
+              onClick={(e) => {
+                e.stopPropagation();
+                onContextMenuOpen?.(e, msgIndex);
+              }}
+            >
+              ⋮
+            </button>
+          </div>
+        )}
+
         <div
           className={`tg-bubble ${mine ? 'out-bubble' : 'in-bubble'} ${
             isLastInGroup && !isSticker && !isEmojiOnlyMsg ? 'has-tail' : ''
           }`}
+          style={getBubbleCornerStyle()}
         >
           {/* SVG Tail on bottom corner of last message in consecutive group */}
           {isLastInGroup && !isSticker && !isEmojiOnlyMsg && (
@@ -329,8 +404,8 @@ export const TelegramMessageBubble: React.FC<TelegramMessageBubbleProps> = ({
             </div>
           )}
 
-          {/* Group Chat Sender Name */}
-          {!mine && showSenderName && (
+          {/* Group Chat Sender Name (strictly shown only on first message of consecutive cluster) */}
+          {!mine && showSenderName && isFirstInGroup && (
             <div
               className="tg-sender-name"
               style={{ color: message.senderColor || getNameColor(message.senderName || message.name) }}
@@ -379,6 +454,48 @@ export const TelegramMessageBubble: React.FC<TelegramMessageBubbleProps> = ({
               ) : (
                 <div className="tg-text-body">
                   {parseFormattedText(message.text || '')}
+                </div>
+              )}
+
+              {/* SMART LINK PREVIEW CARD */}
+              {extractFirstUrl(message.text) && (
+                <div
+                  style={{
+                    marginTop: '8px',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(0, 0, 0, 0.18)',
+                    borderLeft: '3px solid var(--accent-1, #00A884)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    fontSize: '12px',
+                  }}
+                >
+                  <div style={{ fontWeight: 700, color: 'var(--accent-1, #00A884)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🌐</span> {extractFirstUrl(message.text)?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+                  </div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-0, #fff)' }}>
+                    {message.text?.replace(extractFirstUrl(message.text) || '', '').trim() || 'Shared Web Link'}
+                  </div>
+                  <a
+                    href={extractFirstUrl(message.text) || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'var(--accent-1, #00A884)',
+                      textDecoration: 'none',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      marginTop: '2px',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Open Link ↗
+                  </a>
                 </div>
               )}
             </div>

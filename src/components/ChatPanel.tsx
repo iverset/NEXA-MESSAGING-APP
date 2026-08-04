@@ -5,9 +5,12 @@ import { LottiePlayer } from './LottiePlayer';
 import { SUPPORTED_LANGUAGES, getUIText } from '../services/translator';
 import { WallpaperPickerModal } from './WallpaperPickerModal';
 import { SharedMediaModal } from './SharedMediaModal';
+import { MediaLightboxModal } from './MediaLightboxModal';
 import { MutePickerModal } from './MutePickerModal';
 import { DisappearingMessagesModal } from './DisappearingMessagesModal';
 import { MoreActionsModal } from './MoreActionsModal';
+import { PinnedMessagesModal } from './PinnedMessagesModal';
+import { MessageInfoModal } from './MessageInfoModal';
 import { CachedAvatar } from './CachedAvatar';
 import { TelegramMessageBubble } from './TelegramMessageBubble';
 
@@ -99,6 +102,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   // Search in Chat States
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFilter, setSearchFilter] = useState<'all' | 'media' | 'doc' | 'voice' | 'link' | 'pinned'>('all');
   const [matchIndices, setMatchIndices] = useState<number[]>([]);
   const [currentMatchPointer, setCurrentMatchPointer] = useState<number>(0);
 
@@ -109,6 +113,91 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [showMuteModal, setShowMuteModal] = useState(false);
   const [showDisappearingModal, setShowDisappearingModal] = useState(false);
   const [showMoreModal, setShowMoreModal] = useState(false);
+  const [showPinnedModal, setShowPinnedModal] = useState(false);
+  const [infoMessage, setInfoMessage] = useState<ChatMessage | null>(null);
+
+  // Keyboard Shortcuts (Cmd+F / Ctrl+F for search, Esc for close)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowSearchOverlay((prev) => !prev);
+      } else if (e.key === 'Escape') {
+        if (showSearchOverlay) setShowSearchOverlay(false);
+        if (showPinnedModal) setShowPinnedModal(false);
+        if (infoMessage) setInfoMessage(null);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [showSearchOverlay, showPinnedModal, infoMessage]);
+
+  // Voice Recording & File Upload States
+  const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingLocked, setIsRecordingLocked] = useState(false);
+  const [isRecordingPaused, setIsRecordingPaused] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isRecording && !isRecordingPaused) {
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    }
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
+  }, [isRecording, isRecordingPaused]);
+
+  const handleStartVoiceRecording = () => {
+    setIsRecording(true);
+    setIsRecordingLocked(false);
+    setIsRecordingPaused(false);
+    setRecordingSeconds(0);
+    onToast('Voice recording started 🎙️');
+  };
+
+  const handleCancelVoiceRecording = () => {
+    setIsRecording(false);
+    setIsRecordingLocked(false);
+    setIsRecordingPaused(false);
+    setRecordingSeconds(0);
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    onToast('Recording cancelled');
+  };
+
+  const handleSendVoiceRecording = () => {
+    const mins = Math.floor(recordingSeconds / 60);
+    const secs = recordingSeconds % 60;
+    const durStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+    onSendMessage(`🎤 Voice Message (${durStr || '0:03'})`, replyMessage ? replyMessage.text || replyMessage.type : undefined);
+    setIsRecording(false);
+    setIsRecordingLocked(false);
+    setIsRecordingPaused(false);
+    setRecordingSeconds(0);
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (replyMessage) setReplyMessage(null);
+  };
+
+  const handleNativeFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith('image/')) {
+        onSendAttachment('photo');
+      } else {
+        onSendAttachment('doc');
+      }
+      onToast(`Attached file: ${file.name}`);
+    }
+    if (e.target) e.target.value = '';
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
@@ -126,7 +215,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // Update In-Chat Search Matches
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && searchFilter === 'all') {
       setMatchIndices([]);
       setCurrentMatchPointer(0);
       return;
@@ -134,7 +223,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     const query = searchQuery.toLowerCase();
     const matches: number[] = [];
     chatMessages.forEach((m, idx) => {
-      if (m.text && m.text.toLowerCase().includes(query)) {
+      const textMatches = !query || (m.text && m.text.toLowerCase().includes(query)) || (m.name && m.name.toLowerCase().includes(query));
+      let typeMatches = true;
+      if (searchFilter === 'media') typeMatches = m.type === 'photo' || m.type === 'video' || m.type === 'video_note';
+      else if (searchFilter === 'doc') typeMatches = m.type === 'doc';
+      else if (searchFilter === 'voice') typeMatches = m.type === 'voice' || m.type === 'audio';
+      else if (searchFilter === 'link') typeMatches = !!(m.text && (m.text.includes('http://') || m.text.includes('https://')));
+      else if (searchFilter === 'pinned') typeMatches = !!m.isPinned;
+
+      if (textMatches && typeMatches) {
         matches.push(idx);
       }
     });
@@ -145,7 +242,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       const targetIndex = matches[matches.length - 1];
       messageRefs.current[targetIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [searchQuery, chatMessages]);
+  }, [searchQuery, searchFilter, chatMessages]);
 
   const handleNextSearchMatch = (direction: 'up' | 'down') => {
     if (matchIndices.length === 0) return;
@@ -472,7 +569,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
 
         {/* Header Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div className="header-actions">
           <button
             className="panel-hdr-ic"
             title="Search in Chat"
@@ -502,17 +599,73 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {/* STICKY PINNED MESSAGE BANNER */}
       {pinnedMsg && (
-        <div className="tg-pinned-bar" onClick={() => onToast('Jumping to pinned message...')}>
-          <div className="tg-pinned-info">
+        <div className="tg-pinned-bar">
+          <div
+            className="tg-pinned-info"
+            onClick={() => {
+              const idx = chatMessages.findIndex((m) => m.id === pinnedMsg.id || (m.isPinned && m.text === pinnedMsg.text));
+              if (idx !== -1) {
+                messageRefs.current[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              } else {
+                setShowPinnedModal(true);
+              }
+            }}
+            title="Jump to pinned message"
+            style={{ flex: 1, cursor: 'pointer' }}
+          >
             <span style={{ fontSize: '16px' }}>📌</span>
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-1)' }}>Pinned Message</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-1, #00A884)' }}>Pinned Message</div>
               <div className="tg-pinned-text">{pinnedMsg.text || 'Pinned attachment'}</div>
             </div>
           </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 18l6-6-6-6" />
-          </svg>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setShowPinnedModal(true)}
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none',
+                color: '#fff',
+                fontSize: '11px',
+                fontWeight: 600,
+                padding: '4px 10px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+              title="View all pinned messages"
+            >
+              <span>View All ({chatMessages.filter((m) => m.isPinned).length})</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+
+            <button
+              onClick={() => {
+                const idx = chatMessages.findIndex((m) => m.id === pinnedMsg.id || (m.isPinned && m.text === pinnedMsg.text));
+                if (idx !== -1) {
+                  setChatMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, isPinned: false } : m)));
+                  onToast('Message unpinned');
+                }
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: '14px',
+                cursor: 'pointer',
+                padding: '4px 6px',
+                borderRadius: '4px',
+              }}
+              title="Unpin message"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -521,55 +674,91 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: 'column',
             gap: '8px',
-            padding: '8px 16px',
+            padding: '10px 16px',
             background: 'var(--bg-1)',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
             zIndex: 10,
           }}
         >
-          <input
-            type="text"
-            placeholder="Search in chat..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-            style={{
-              flex: 1,
-              background: 'var(--bg-2)',
-              border: 'none',
-              borderRadius: '16px',
-              padding: '6px 14px',
-              color: 'var(--text-0)',
-              fontSize: '13.5px',
-              outline: 'none',
-            }}
-          />
-          <span style={{ fontSize: '12px', color: 'var(--text-1)', minWidth: '60px', textAlign: 'center' }}>
-            {matchIndices.length > 0 ? `${currentMatchPointer + 1} of ${matchIndices.length}` : 'No matches'}
-          </span>
-          <button
-            style={{ background: 'none', border: 'none', color: 'var(--text-0)', cursor: 'pointer' }}
-            onClick={() => handleNextSearchMatch('up')}
-          >
-            ▲
-          </button>
-          <button
-            style={{ background: 'none', border: 'none', color: 'var(--text-0)', cursor: 'pointer' }}
-            onClick={() => handleNextSearchMatch('down')}
-          >
-            ▼
-          </button>
-          <button
-            style={{ background: 'none', border: 'none', color: 'var(--text-1)', cursor: 'pointer' }}
-            onClick={() => {
-              setShowSearchOverlay(false);
-              setSearchQuery('');
-            }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="text"
+              placeholder="Search in chat (Cmd+F / Ctrl+F)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+              style={{
+                flex: 1,
+                background: 'var(--bg-2)',
+                border: 'none',
+                borderRadius: '16px',
+                padding: '6px 14px',
+                color: 'var(--text-0)',
+                fontSize: '13.5px',
+                outline: 'none',
+              }}
+            />
+            <span style={{ fontSize: '12px', color: 'var(--text-1)', minWidth: '60px', textAlign: 'center' }}>
+              {matchIndices.length > 0 ? `${currentMatchPointer + 1} of ${matchIndices.length}` : 'No matches'}
+            </span>
+            <button
+              style={{ background: 'none', border: 'none', color: 'var(--text-0)', cursor: 'pointer', padding: '4px 8px' }}
+              onClick={() => handleNextSearchMatch('up')}
+              title="Previous Match"
+            >
+              ▲
+            </button>
+            <button
+              style={{ background: 'none', border: 'none', color: 'var(--text-0)', cursor: 'pointer', padding: '4px 8px' }}
+              onClick={() => handleNextSearchMatch('down')}
+              title="Next Match"
+            >
+              ▼
+            </button>
+            <button
+              style={{ background: 'none', border: 'none', color: 'var(--text-1)', cursor: 'pointer', padding: '4px 8px' }}
+              onClick={() => {
+                setShowSearchOverlay(false);
+                setSearchQuery('');
+                setSearchFilter('all');
+              }}
+              title="Close Search"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Filter Pills */}
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'media', label: '🖼️ Photos/Video' },
+              { id: 'doc', label: '📄 Files' },
+              { id: 'voice', label: '🎙️ Voice' },
+              { id: 'link', label: '🔗 Links' },
+              { id: 'pinned', label: '📌 Pinned' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setSearchFilter(f.id as any)}
+                style={{
+                  background: searchFilter === f.id ? 'var(--accent-1, #00A884)' : 'var(--bg-2, #202c33)',
+                  color: searchFilter === f.id ? '#000' : 'var(--text-0, #fff)',
+                  fontWeight: searchFilter === f.id ? 700 : 500,
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '4px 10px',
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -580,8 +769,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           const prevMsg = chatMessages[idx - 1];
           const nextMsg = chatMessages[idx + 1];
 
-          const isFirstInGroup = !prevMsg || prevMsg.from !== msg.from;
-          const isLastInGroup = !nextMsg || nextMsg.from !== msg.from;
+          // Helper to check if two messages belong to the exact same sender
+          const isSameSender = (m1?: ChatMessage, m2?: ChatMessage) => {
+            if (!m1 || !m2) return false;
+            if (m1.type === 'system' || m2.type === 'system') return false;
+            if (m1.from !== m2.from) return false;
+            if (m1.from === 'me') return true;
+            const s1 = m1.senderName || m1.name || m1.avatar || 'user';
+            const s2 = m2.senderName || m2.name || m2.avatar || 'user';
+            return s1 === s2;
+          };
+
+          const isFirstInGroup = !prevMsg || !isSameSender(prevMsg, msg);
+          const isLastInGroup = !nextMsg || !isSameSender(nextMsg, msg);
           const isSearchMatch = matchIndices[currentMatchPointer] === idx;
 
           return (
@@ -758,53 +958,228 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
           )}
 
-          {/* Composer Actions & Textarea */}
+          {/* Hidden Native File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            multiple
+            onChange={handleNativeFileSelect}
+          />
+
+          {/* Composer Actions & Textarea / Voice Recording HUD */}
           <div className="composer-row">
-            <button
-              className="composer-ic-btn"
-              title="Emoji & Animated Stickers"
-              onClick={() => {
-                setShowEmojiPicker(!showEmojiPicker);
-                setShowAttachMenu(false);
-              }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
-              </svg>
-            </button>
+            {isRecording ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  gap: '12px',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                  borderRadius: '24px',
+                  padding: '6px 16px',
+                }}
+              >
+                {/* Red pulsing dot & Timer */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      background: '#FF453A',
+                      opacity: isRecordingPaused ? 0.5 : 1,
+                    }}
+                  />
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>
+                    {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+                  </span>
+                </div>
 
-            <button
-              className="composer-ic-btn"
-              title="Attach File or Media"
-              onClick={() => {
-                setShowAttachMenu(!showAttachMenu);
-                setShowEmojiPicker(false);
-              }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-              </svg>
-            </button>
+                {/* Animated Live Waveform */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flex: 1, justifyContent: 'center' }}>
+                  {[12, 20, 26, 16, 30, 14, 24, 32, 18, 22, 10, 28, 16, 24].map((h, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        width: '3px',
+                        height: isRecordingPaused ? '8px' : `${h}px`,
+                        background: 'var(--accent-1, #00A884)',
+                        borderRadius: '2px',
+                        transition: 'height 0.2s ease',
+                      }}
+                    />
+                  ))}
+                </div>
 
-            <input
-              type="text"
-              className="composer-input"
-              placeholder={editingIndex !== null ? 'Edit message...' : 'Write a message...'}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
+                {/* Lock & Pause/Resume / Cancel / Send Controls */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {!isRecordingLocked ? (
+                    <button
+                      onClick={() => {
+                        setIsRecordingLocked(true);
+                        onToast('Recording locked 🔒');
+                      }}
+                      style={{
+                        background: 'rgba(255,255,255,0.12)',
+                        border: 'none',
+                        color: '#fff',
+                        borderRadius: '16px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                      }}
+                    >
+                      🔒 Lock
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setIsRecordingPaused(!isRecordingPaused)}
+                      style={{
+                        background: 'rgba(255,255,255,0.12)',
+                        border: 'none',
+                        color: '#fff',
+                        borderRadius: '50%',
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                      }}
+                      title={isRecordingPaused ? 'Resume Recording' : 'Pause Recording'}
+                    >
+                      {isRecordingPaused ? '▶️' : '⏸️'}
+                    </button>
+                  )}
 
-            <button
-              className={`composer-send-btn ${inputText.trim() ? 'active' : ''}`}
-              title="Send Message"
-              onClick={handleSend}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
+                  <button
+                    onClick={handleCancelVoiceRecording}
+                    style={{
+                      background: 'rgba(255, 69, 58, 0.25)',
+                      border: '1px solid rgba(255, 69, 58, 0.5)',
+                      color: '#FF453A',
+                      borderRadius: '50%',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                    title="Cancel Recording"
+                  >
+                    🗑️
+                  </button>
+
+                  <button
+                    onClick={handleSendVoiceRecording}
+                    style={{
+                      background: 'var(--accent-1, #00A884)',
+                      border: 'none',
+                      color: '#000',
+                      borderRadius: '50%',
+                      width: '34px',
+                      height: '34px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                    }}
+                    title="Send Voice Note"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  className="composer-ic-btn"
+                  title="Emoji & Animated Stickers"
+                  onClick={() => {
+                    setShowEmojiPicker(!showEmojiPicker);
+                    setShowAttachMenu(false);
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+                  </svg>
+                </button>
+
+                <button
+                  className="composer-ic-btn"
+                  title="Attach File or Media"
+                  onClick={() => {
+                    setShowAttachMenu(!showAttachMenu);
+                    setShowEmojiPicker(false);
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                  </svg>
+                </button>
+
+                <input
+                  type="text"
+                  className="composer-input"
+                  placeholder={editingIndex !== null ? 'Edit message...' : 'Write a message...'}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={(e) => {
+                    if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+                      e.preventDefault();
+                      const file = e.clipboardData.files[0];
+                      if (file.type.startsWith('image/')) {
+                        onSendAttachment('photo');
+                      } else {
+                        onSendAttachment('doc');
+                      }
+                      onToast(`Pasted attachment: ${file.name}`);
+                    }
+                  }}
+                />
+
+                {inputText.trim() ? (
+                  <button
+                    className="composer-send-btn active"
+                    title="Send Message"
+                    onClick={handleSend}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    className="composer-send-btn active"
+                    title="Record Voice Note"
+                    onClick={handleStartVoiceRecording}
+                    style={{
+                      background: 'rgba(0, 168, 132, 0.18)',
+                      color: 'var(--accent-1, #00A884)',
+                      border: '1px solid rgba(0, 168, 132, 0.35)',
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                      <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+                    </svg>
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -854,6 +1229,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 fontSize: '12px',
               }}
               onClick={() => {
+                if (item.type === 'doc' || item.type === 'photo') {
+                  fileInputRef.current?.click();
+                }
                 onSendAttachment(item.type as any);
                 setShowAttachMenu(false);
               }}
@@ -879,11 +1257,75 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
       )}
 
-      {/* FLOATING TELEGRAM CONTEXT MENU */}
+      {/* FLOATING TELEGRAM CONTEXT MENU WITH QUICK REACTIONS */}
       {contextMenu?.visible && (
         <>
           <div className="tg-context-backdrop" onClick={() => setContextMenu(null)} />
           <div className="tg-context-menu" style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}>
+            {/* Quick Reaction Strip */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 10px',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(0,0,0,0.25)',
+                borderRadius: '12px 12px 0 0',
+              }}
+            >
+              {['👍', '❤️', '😂', '😮', '😢', '👎'].map((emoji) => (
+                <button
+                  key={emoji}
+                  style={{
+                    background: 'rgba(255,255,255,0.08)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    fontSize: '18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'transform 0.15s, background 0.15s',
+                  }}
+                  className="quick-react-btn"
+                  onClick={() => {
+                    if (contextMenu.msgIndex !== undefined) {
+                      onReactMessage(contextMenu.msgIndex, emoji);
+                    }
+                    setContextMenu(null);
+                  }}
+                >
+                  {emoji}
+                </button>
+              ))}
+              <button
+                style={{
+                  background: 'rgba(0, 168, 132, 0.2)',
+                  border: '1px solid var(--accent-1, #00A884)',
+                  color: 'var(--accent-1, #00A884)',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+                title="More Reactions"
+                onClick={() => {
+                  setContextMenu(null);
+                  setShowEmojiPicker(true);
+                }}
+              >
+                ➕
+              </button>
+            </div>
+
             <button className="tg-context-item" onClick={handleContextMenuReply}>
               <span>↩</span> Reply
             </button>
@@ -897,13 +1339,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <span>➦</span> Forward
             </button>
             <button className="tg-context-item" onClick={handleContextMenuPin}>
-              <span>📌</span> Pin Message
+              <span>📌</span> {contextMenu && chatMessages[contextMenu.msgIndex]?.isPinned ? 'Unpin Message' : 'Pin Message'}
             </button>
             <button className="tg-context-item" onClick={handleContextMenuSelect}>
               <span>☑️</span> Select
             </button>
             <button className="tg-context-item" onClick={handleContextMenuTranslate}>
               <span>🌐</span> Translate
+            </button>
+            <button
+              className="tg-context-item"
+              onClick={() => {
+                if (contextMenu) setInfoMessage(chatMessages[contextMenu.msgIndex]);
+                setContextMenu(null);
+              }}
+            >
+              <span>ℹ️</span> Message Info
             </button>
             <button className="tg-context-item danger" onClick={handleContextMenuDelete}>
               <span>🗑️</span> Delete
@@ -914,39 +1365,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {/* LIGHTBOX MODAL */}
       {lightboxMedia && (
-        <div className="tg-lightbox-modal" onClick={() => setLightboxMedia(null)}>
-          <button
-            style={{
-              position: 'absolute',
-              top: '20px',
-              right: '20px',
-              background: 'rgba(255,255,255,0.2)',
-              border: 'none',
-              color: '#fff',
-              fontSize: '24px',
-              borderRadius: '50%',
-              width: '40px',
-              height: '40px',
-              cursor: 'pointer',
-            }}
-            onClick={() => setLightboxMedia(null)}
-          >
-            ✕
-          </button>
-          {lightboxMedia.type === 'photo' ? (
-            <img src={lightboxMedia.url} alt="Full view" className="tg-lightbox-content" />
-          ) : (
-            <video src={lightboxMedia.url} controls autoPlay className="tg-lightbox-content" />
-          )}
-        </div>
+        <MediaLightboxModal
+          mediaUrl={lightboxMedia.url}
+          type={lightboxMedia.type}
+          senderName={activeRoom?.name || 'Sender'}
+          onClose={() => setLightboxMedia(null)}
+          onToast={onToast}
+        />
       )}
 
       {/* MORE ACTIONS MODAL */}
-      {showMoreModal && (
+      {showMoreModal && activeRoom && (
         <MoreActionsModal
+          room={activeRoom}
           roomName={activeRoom.name}
           isMuted={activeRoom.muted}
           disappearingTimer={activeRoom.disappearingTimer || 'Off'}
+          messages={messages}
           onClose={() => setShowMoreModal(false)}
           onOpenWallpaperModal={() => {
             setShowMoreModal(false);
@@ -997,7 +1432,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )}
 
       {showSharedMediaModal && (
-        <SharedMediaModal messages={chatMessages} onClose={() => setShowSharedMediaModal(false)} />
+        <SharedMediaModal
+          roomName={activeRoom?.name || 'Chat Conversation'}
+          messages={chatMessages}
+          onClose={() => setShowSharedMediaModal(false)}
+          onToast={onToast}
+        />
       )}
 
       {showMuteModal && (
@@ -1018,6 +1458,37 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             setShowDisappearingModal(false);
           }}
           onClose={() => setShowDisappearingModal(false)}
+        />
+      )}
+
+      {/* PINNED MESSAGES BROWSER MODAL */}
+      {showPinnedModal && (
+        <PinnedMessagesModal
+          pinnedMessages={chatMessages.filter((m) => m.isPinned)}
+          onJumpToMessage={(msgId, text) => {
+            setShowPinnedModal(false);
+            const targetIdx = chatMessages.findIndex((m) => (msgId ? m.id === msgId : m.text === text));
+            if (targetIdx !== -1) {
+              messageRefs.current[targetIdx]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }}
+          onUnpinMessage={(msg) => {
+            const idx = chatMessages.findIndex((m) => m.id === msg.id || m.text === msg.text);
+            if (idx !== -1) {
+              setChatMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, isPinned: false } : m)));
+            }
+          }}
+          onClose={() => setShowPinnedModal(false)}
+          onToast={onToast}
+        />
+      )}
+
+      {/* MESSAGE INFO MODAL */}
+      {infoMessage && (
+        <MessageInfoModal
+          message={infoMessage}
+          onClose={() => setInfoMessage(null)}
+          onToast={onToast}
         />
       )}
     </div>

@@ -2,31 +2,51 @@ import React, { useState } from 'react';
 import { ChatRoom, ChatMessage } from '../types';
 
 interface MoreActionsModalProps {
-  room: ChatRoom;
-  messages: ChatMessage[];
-  onReport: () => void;
+  room?: ChatRoom;
+  roomName?: string;
+  isMuted?: boolean;
+  disappearingTimer?: string;
+  messages?: ChatMessage[];
+  onReport?: () => void;
   onBlock?: () => void;
+  onBlockUser?: () => void;
   onExitGroup?: () => void;
-  onClearChat: () => void;
-  onExportChat: () => void;
-  onAddShortcut: () => void;
+  onClearChat?: () => void;
+  onExportChat?: () => void;
+  onAddShortcut?: () => void;
   onClose: () => void;
+  onOpenWallpaperModal?: () => void;
+  onOpenSharedMediaModal?: () => void;
+  onOpenMuteModal?: () => void;
+  onOpenDisappearingModal?: () => void;
+  onUnfollowChannel?: () => void;
 }
 
 export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
   room,
-  messages,
+  roomName,
+  isMuted,
+  disappearingTimer,
+  messages = [],
   onReport,
   onBlock,
+  onBlockUser,
   onExitGroup,
   onClearChat,
   onExportChat,
   onAddShortcut,
   onClose,
+  onOpenWallpaperModal,
+  onOpenSharedMediaModal,
+  onOpenMuteModal,
+  onOpenDisappearingModal,
+  onUnfollowChannel,
 }) => {
   const [activePrompt, setActivePrompt] = useState<'none' | 'report' | 'block' | 'exit' | 'clear'>('none');
 
-  const isGroup = room.type === 'group';
+  const displayName = room?.name || roomName || 'Chat';
+  const isGroup = room?.type === 'group';
+  const handleBlock = onBlock || onBlockUser;
 
   return (
     <div
@@ -70,7 +90,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
                 background: 'var(--bg-2, #202c33)',
               }}
             >
-              <div style={{ fontSize: '16px', fontWeight: 700 }}>More Actions • {room.name}</div>
+              <div style={{ fontSize: '16px', fontWeight: 700 }}>More Actions • {displayName}</div>
               <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}>
                 ✕
               </button>
@@ -99,7 +119,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
               </button>
 
               {/* Block (1-on-1) or Exit Group (Group) */}
-              {!isGroup && onBlock && (
+              {!isGroup && handleBlock && (
                 <button
                   onClick={() => setActivePrompt('block')}
                   style={{
@@ -117,7 +137,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
                     gap: '10px',
                   }}
                 >
-                  <span>🚫</span> Block {room.name}
+                  <span>🚫</span> Block {displayName}
                 </button>
               )}
 
@@ -167,7 +187,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
               {/* Export chat */}
               <button
                 onClick={() => {
-                  onExportChat();
+                  onExportChat?.();
                   onClose();
                 }}
                 style={{
@@ -191,7 +211,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
               {/* Add shortcut */}
               <button
                 onClick={() => {
-                  onAddShortcut();
+                  onAddShortcut?.();
                   onClose();
                 }}
                 style={{
@@ -219,10 +239,10 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
         {activePrompt === 'report' && (
           <div style={{ padding: '20px' }}>
             <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: '#FF5376' }}>
-              ⚠️ Report {room.name}?
+              ⚠️ Report {displayName}?
             </div>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4', marginBottom: '20px' }}>
-              The last 5 messages from this chat will be forwarded to WhatsApp safety moderation. No one in this chat will be notified.
+              The last 5 messages from this chat will be forwarded to safety moderation. No one in this chat will be notified.
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button onClick={() => setActivePrompt('none')} style={{ padding: '8px 16px', background: 'none', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', borderRadius: '8px', cursor: 'pointer' }}>
@@ -230,7 +250,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
               </button>
               <button
                 onClick={() => {
-                  onReport();
+                  onReport?.();
                   onClose();
                 }}
                 style={{ padding: '8px 18px', background: '#FF5376', border: 'none', color: '#fff', fontWeight: 700, borderRadius: '8px', cursor: 'pointer' }}
@@ -244,7 +264,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
         {activePrompt === 'block' && (
           <div style={{ padding: '20px' }}>
             <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: '#FF5376' }}>
-              🚫 Block {room.name}?
+              🚫 Block {displayName}?
             </div>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4', marginBottom: '20px' }}>
               Blocked contacts will no longer be able to call you or send you messages. This contact will not be notified.
@@ -255,7 +275,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
               </button>
               <button
                 onClick={() => {
-                  if (onBlock) onBlock();
+                  if (handleBlock) handleBlock();
                   onClose();
                 }}
                 style={{ padding: '8px 18px', background: '#FF5376', border: 'none', color: '#fff', fontWeight: 700, borderRadius: '8px', cursor: 'pointer' }}
@@ -269,7 +289,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
         {activePrompt === 'exit' && (
           <div style={{ padding: '20px' }}>
             <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px', color: '#FF5376' }}>
-              🚪 Exit "{room.name}"?
+              🚪 Exit "{displayName}"?
             </div>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: '1.4', marginBottom: '20px' }}>
               Only group admins will be notified that you left the group. You will no longer be able to send messages here.

@@ -321,11 +321,6 @@ const SwipeableChatItem: React.FC<SwipeableChatItemProps> = ({
           <div className="li-top">
             <span className="li-name" style={{ fontWeight: 600, color: 'var(--text-0)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <span>{chat.name}</span>
-              {chat.username && (
-                <span style={{ fontSize: '11px', color: 'var(--accent-1, #00A884)', fontWeight: 500, opacity: 0.9 }}>
-                  @{chat.username}
-                </span>
-              )}
             </span>
             <span className="li-time">{chat.time}</span>
           </div>

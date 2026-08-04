@@ -71,6 +71,11 @@ import {
   PrivacySettings,
   SecuritySettings,
   calculatePasswordStrength,
+  getDeviceAccounts,
+  addDeviceAccount,
+  switchActiveAccount,
+  removeDeviceAccount,
+  MultiAccount,
 } from '../services/AuthService';
 
 interface DrawerProps {
@@ -158,7 +163,14 @@ export const Drawer: React.FC<DrawerProps> = ({
   const [showPassText, setShowPassText] = useState<boolean>(false);
   const [passError, setPassError] = useState<string>('');
 
+  // Multi-Account Device State
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
+  const [deviceAccounts, setDeviceAccounts] = useState<MultiAccount[]>(() => getDeviceAccounts());
+  const [showAddAccountModal, setShowAddAccountModal] = useState<boolean>(false);
+  const [addAccName, setAddAccName] = useState<string>('');
+  const [addAccUsername, setAddAccUsername] = useState<string>('');
+  const [addAccPhone, setAddAccPhone] = useState<string>('');
+  const [addAccError, setAddAccError] = useState<string>('');
   const [showLegalModal, setShowLegalModal] = useState<'privacy' | 'terms' | 'licenses' | 'guidelines' | null>(null);
   const [blockedSearchQuery, setBlockedSearchQuery] = useState<string>('');
   const [usernameStatus, setUsernameStatus] = useState<{ available: boolean; message?: string } | null>(null);
@@ -1502,17 +1514,137 @@ export const Drawer: React.FC<DrawerProps> = ({
             </div>
           </div>
 
-          {/* Account Actions */}
+          {/* Device Multi-Account Management (Max 2 Accounts) */}
           <div className="setting-group">
-            <h4>Account & Security Shortcuts</h4>
-
-            <div
-              className="settings-action-btn"
-              style={{ marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(0, 168, 132, 0.15)', border: '1px solid var(--accent-1, #00A884)', color: 'var(--accent-1, #00A884)' }}
-              onClick={() => onOpenOnboarding?.('auth')}
-            >
-              <ShieldCheck size={16} /> App Onboarding & Sign In Screen
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <h4 style={{ margin: 0 }}>Device Accounts ({deviceAccounts.length}/2)</h4>
+              <button
+                onClick={() => {
+                  if (deviceAccounts.length >= 2) {
+                    onToast('⚠️ Device limit reached: Maximum 2 accounts allowed on this device.');
+                    return;
+                  }
+                  setAddAccName('');
+                  setAddAccUsername('');
+                  setAddAccPhone('');
+                  setAddAccError('');
+                  setShowAddAccountModal(true);
+                }}
+                disabled={deviceAccounts.length >= 2}
+                style={{
+                  background: deviceAccounts.length >= 2 ? 'rgba(255,255,255,0.05)' : 'rgba(0, 168, 132, 0.15)',
+                  border: deviceAccounts.length >= 2 ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--accent-1, #00A884)',
+                  color: deviceAccounts.length >= 2 ? 'var(--text-1)' : 'var(--accent-1, #00A884)',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  cursor: deviceAccounts.length >= 2 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  opacity: deviceAccounts.length >= 2 ? 0.6 : 1,
+                }}
+              >
+                + Add Account
+              </button>
             </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+              {deviceAccounts.map((acc) => (
+                <div
+                  key={acc.id}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    background: acc.isActive ? 'rgba(0, 168, 132, 0.12)' : 'rgba(255,255,255,0.03)',
+                    border: acc.isActive ? '1px solid var(--accent-1, #00A884)' : '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        background: 'var(--accent-1, #00A884)',
+                        color: '#000',
+                        fontWeight: 700,
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {acc.name.charAt(0)}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {acc.name}
+                        {acc.isActive && (
+                          <span style={{ background: 'var(--accent-1)', color: '#000', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '8px' }}>
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-1)' }}>@{acc.username} • {acc.phone}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {!acc.isActive && (
+                      <button
+                        onClick={() => {
+                          const updated = switchActiveAccount(acc.id);
+                          setDeviceAccounts(updated);
+                          onToast(`Switched active account to ${acc.name}`);
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          background: 'rgba(0, 168, 132, 0.2)',
+                          border: '1px solid var(--accent-1)',
+                          color: 'var(--accent-1)',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Switch
+                      </button>
+                    )}
+                    {deviceAccounts.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const updated = removeDeviceAccount(acc.id);
+                          setDeviceAccounts(updated);
+                          onToast(`Removed account @${acc.username} from device`);
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          border: '1px solid rgba(239, 68, 68, 0.3)',
+                          color: '#ef4444',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="cat-sub" style={{ fontSize: '11px', marginTop: '8px', color: 'var(--text-1)' }}>
+              🔒 Device Limit Policy: Maximum of 2 signed-in accounts allowed simultaneously on one device.
+            </p>
 
             <div
               className="settings-action-btn"
@@ -2941,6 +3073,101 @@ export const Drawer: React.FC<DrawerProps> = ({
             >
               Close Document
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Account Modal (Device Limit: 2 Accounts Max) */}
+      {showAddAccountModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+          <div style={{ background: '#111b21', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.1)', width: '100%', maxWidth: '380px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', color: '#fff' }}>Add Secondary Nexa Account</h3>
+              <div style={{ cursor: 'pointer', opacity: 0.7 }} onClick={() => setShowAddAccountModal(false)}>✕</div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '11.5px', color: 'var(--text-1)', display: 'block', marginBottom: '4px' }}>Full Name</label>
+                <input
+                  type="text"
+                  className="field-input"
+                  placeholder="e.g. Sarah Connor"
+                  value={addAccName}
+                  onChange={(e) => setAddAccName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11.5px', color: 'var(--text-1)', display: 'block', marginBottom: '4px' }}>Username (@handle)</label>
+                <input
+                  type="text"
+                  className="field-input"
+                  placeholder="e.g. sarah_c"
+                  value={addAccUsername}
+                  onChange={(e) => setAddAccUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11.5px', color: 'var(--text-1)', display: 'block', marginBottom: '4px' }}>Phone Number</label>
+                <input
+                  type="text"
+                  className="field-input"
+                  placeholder="e.g. +1 555 01928"
+                  value={addAccPhone}
+                  onChange={(e) => setAddAccPhone(e.target.value)}
+                />
+              </div>
+
+              {addAccError && (
+                <div style={{ fontSize: '12px', color: '#FF5376', fontWeight: 600 }}>
+                  ⚠️ {addAccError}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  onClick={() => setShowAddAccountModal(false)}
+                  style={{ flex: 1, padding: '9px', borderRadius: '8px', background: 'rgba(255,255,255,0.08)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '12.5px', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (!addAccName.trim()) {
+                      setAddAccError('Please enter a display name.');
+                      return;
+                    }
+                    if (addAccUsername.length < 4) {
+                      setAddAccError('Username must be at least 4 characters long.');
+                      return;
+                    }
+                    if (!addAccPhone.trim()) {
+                      setAddAccError('Please enter a phone number.');
+                      return;
+                    }
+
+                    const res = addDeviceAccount({
+                      name: addAccName.trim(),
+                      username: addAccUsername.trim(),
+                      phone: addAccPhone.trim(),
+                    });
+
+                    if (!res.success) {
+                      setAddAccError(res.message);
+                    } else {
+                      setDeviceAccounts(res.accounts);
+                      setShowAddAccountModal(false);
+                      onToast(res.message);
+                    }
+                  }}
+                  style={{ flex: 1, padding: '9px', borderRadius: '8px', background: 'var(--accent-1, #00A884)', color: '#000', border: 'none', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer' }}
+                >
+                  Add Account
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
