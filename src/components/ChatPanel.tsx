@@ -551,15 +551,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           }}
         >
           <img
-            src="/great-minds-logo.svg"
-            alt=""
+            src="/images/nexa_app_logo.jpg"
+            alt="NEXA"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
             style={{
-              width: 'min(380px, 70vw)',
-              height: 'min(380px, 70vw)',
-              opacity: 0.09,
-              filter: 'drop-shadow(0 0 20px rgba(0, 242, 254, 0.4))',
+              width: 'min(300px, 60vw)',
+              height: 'min(300px, 60vw)',
+              borderRadius: '28px',
+              opacity: 0.12,
+              filter: 'drop-shadow(0 0 24px rgba(0, 242, 254, 0.5))',
               userSelect: 'none',
+              objectFit: 'cover',
             }}
           />
         </div>
