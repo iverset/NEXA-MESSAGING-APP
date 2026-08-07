@@ -141,7 +141,10 @@ export const CachedAvatar: React.FC<CachedAvatarProps> = React.memo(({
           loading={lazy ? 'lazy' : 'eager'}
           referrerPolicy="no-referrer"
           onLoad={() => setIsLoaded(true)}
-          onError={() => setHasError(true)}
+          onError={(e) => {
+            setHasError(true);
+            e.currentTarget.style.display = 'none';
+          }}
           style={{
             position: 'absolute',
             inset: 0,

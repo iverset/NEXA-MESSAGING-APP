@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { NexaAppIcon } from '../NexaAppIcon';
 import { Edit2, Loader2 } from 'lucide-react';
 
 interface OtpVerificationScreenProps {
@@ -79,17 +80,8 @@ export const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({
 
   return (
     <div className={`nexa-auth-card ${isShaking ? 'shake' : ''}`}>
-      <div className="nexa-auth-logo-icon">
-        <svg viewBox="0 0 40 40" fill="none" style={{ width: '32px', height: '32px' }}>
-          <path
-            d="M10 30V10L30 30V10"
-            stroke="#ffffff"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle cx="30" cy="9" r="2.5" fill="#ffffff" />
-        </svg>
+      <div style={{ marginBottom: '20px' }}>
+        <NexaAppIcon size={56} borderRadius={16} />
       </div>
 
       <h1 className="nexa-auth-title">Verify your number</h1>

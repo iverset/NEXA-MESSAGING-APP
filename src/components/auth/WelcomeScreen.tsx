@@ -1,4 +1,5 @@
 import React from 'react';
+import { NexaAppIcon } from '../NexaAppIcon';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -7,12 +8,8 @@ interface WelcomeScreenProps {
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) => {
   return (
     <div className="nexa-auth-card">
-      <div className="nexa-auth-logo-icon" style={{ overflow: 'hidden', border: '1px solid rgba(0, 240, 255, 0.4)' }}>
-        <img
-          src="/images/app_ai_icon.jpg"
-          alt="NEXA Logo"
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
+      <div style={{ marginBottom: '20px' }}>
+        <NexaAppIcon size={56} borderRadius={16} />
       </div>
 
       <h1 className="nexa-auth-title">Welcome to Nexa</h1>

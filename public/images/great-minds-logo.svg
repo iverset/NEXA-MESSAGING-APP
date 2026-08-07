@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="gmGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F2FE" />
+      <stop offset="50%" stop-color="#00C6FF" />
+      <stop offset="100%" stop-color="#4FACFE" />
+    </linearGradient>
+    <radialGradient id="gmGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00F2FE" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#00C6FF" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Ambient Glow -->
+  <circle cx="256" cy="256" r="220" fill="url(#gmGlow)" />
+  
+  <!-- Outer Neural Ring -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#gmGrad1)" stroke-width="4" stroke-dasharray="8 12" opacity="0.7" />
+  <circle cx="256" cy="256" r="140" fill="none" stroke="url(#gmGrad1)" stroke-width="2" opacity="0.4" />
+  
+  <!-- Geometric Great Minds Core Emblem -->
+  <g transform="translate(256 256)">
+    <!-- Central Brain/Infinity Nodes -->
+    <path d="M-60,-30 C-100,-70 -130,-10 -100,40 C-70,80 -20,60 0,0 C20,60 70,80 100,40 C130,-10 100,-70 60,-30 C30,0 0,-20 0,-20 C0,-20 -30,0 -60,-30 Z" 
+          fill="none" stroke="url(#gmGrad1)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+          
+    <path d="M-40,-20 C-70,-50 -90,-10 -70,25 C-50,55 -15,40 0,0 C15,40 50,55 70,25 C90,-10 70,-50 40,-20 C20,0 0,-10 0,-10 C0,-10 -20,0 -40,-20 Z" 
+          fill="none" stroke="#00E5FF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" opacity="0.8" />
+          
+    <!-- Core Spark / Diamond -->
+    <polygon points="0,-35 25,0 0,35 -25,0" fill="url(#gmGrad1)" opacity="0.9" />
+    <circle cx="0" cy="0" r="8" fill="#FFFFFF" />
+    
+    <!-- Satellite Nodes -->
+    <circle cx="-120" cy="-40" r="7" fill="#00F2FE" />
+    <circle cx="120" cy="-40" r="7" fill="#00F2FE" />
+    <circle cx="-100" cy="80" r="6" fill="#00C6FF" />
+    <circle cx="100" cy="80" r="6" fill="#00C6FF" />
+    <circle cx="0" cy="-140" r="8" fill="#4FACFE" />
+    <circle cx="0" cy="140" r="8" fill="#4FACFE" />
+    
+    <!-- Connection lines -->
+    <line x1="-120" y1="-40" x2="-60" y2="-30" stroke="#00F2FE" stroke-width="2" opacity="0.5" />
+    <line x1="120" y1="-40" x2="60" y2="-30" stroke="#00F2FE" stroke-width="2" opacity="0.5" />
+    <line x1="0" y1="-140" x2="0" y2="-35" stroke="#4FACFE" stroke-width="2" opacity="0.5" />
+  </g>
+  
+  <!-- Subtle Typographic Ring Text or Accent Marks -->
+  <text x="256" y="460" text-anchor="middle" font-family="'Space Grotesk', sans-serif" font-size="22" font-weight="700" fill="#00E5FF" letter-spacing="6" opacity="0.85">GREAT MINDS AI</text>
+</svg>

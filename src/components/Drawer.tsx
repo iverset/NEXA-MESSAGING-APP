@@ -473,7 +473,7 @@ export const Drawer: React.FC<DrawerProps> = ({
               {currentAvatar.isVideo && currentAvatar.videoUrl ? (
                 <video src={currentAvatar.videoUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : currentAvatar.url && !currentAvatar.url.startsWith('linear') ? (
-                <img src={currentAvatar.url} alt="Profile Avatar" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={currentAvatar.url} alt="Profile Avatar" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 initials(profile.name)
               )}
@@ -526,7 +526,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                 {currentAvatar.isVideo && currentAvatar.videoUrl ? (
                   <video src={currentAvatar.videoUrl} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : currentAvatar.url && !currentAvatar.url.startsWith('linear') ? (
-                  <img src={currentAvatar.url} alt="Profile Photo" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={currentAvatar.url} alt="Profile Photo" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   initials(profile.name)
                 )}
@@ -1959,7 +1959,7 @@ export const Drawer: React.FC<DrawerProps> = ({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {user.avatar ? (
-                      <img src={user.avatar} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover' }} alt="" />
+                      <img src={user.avatar} referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover' }} alt="" />
                     ) : (
                       <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--accent-1)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                         {user.name.charAt(0)}

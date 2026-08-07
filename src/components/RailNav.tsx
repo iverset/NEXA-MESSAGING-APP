@@ -2,6 +2,7 @@ import React from 'react';
 import { AppSection } from '../types';
 import { getUIText } from '../services/translator';
 import { GreatMindsRing } from './GreatMindsRing';
+import { NexaAppIcon } from './NexaAppIcon';
 
 interface RailNavProps {
   activeSection: AppSection;
@@ -63,21 +64,8 @@ export const RailNav: React.FC<RailNavProps> = ({
 }) => {
   return (
     <div className={`rail ${isHiddenOnMobile ? 'hide-mobile' : ''}`}>
-      <div className="logo" title="NEXA Platform" onClick={() => onSelectSection('chats')}>
-        <img
-          src="/images/app_ai_icon.jpg"
-          alt="NEXA App Icon"
-          style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '11px',
-            objectFit: 'cover',
-            boxShadow: '0 0 14px rgba(0, 240, 255, 0.6), 0 0 8px rgba(0, 198, 255, 0.4)',
-            border: '1px solid rgba(0, 240, 255, 0.4)',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-          }}
-        />
+      <div className="logo" title="NEXA Platform" onClick={() => onSelectSection('chats')} style={{ cursor: 'pointer' }}>
+        <NexaAppIcon size={38} borderRadius={11} />
       </div>
 
       <div className="rail-nav">
@@ -121,7 +109,13 @@ export const RailNav: React.FC<RailNavProps> = ({
           style={{ overflow: 'hidden', padding: 0 }}
         >
           {userAvatarUrl && !userAvatarUrl.startsWith('linear') ? (
-            <img src={userAvatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            <img
+              src={userAvatarUrl}
+              alt="Avatar"
+              referrerPolicy="no-referrer"
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+            />
           ) : (
             userInitials || 'You'
           )}

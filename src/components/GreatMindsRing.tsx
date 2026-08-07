@@ -101,10 +101,23 @@ export const GreatMindsRing: React.FC<GreatMindsRingProps> = ({
           background: '#0B111D',
         }}
       >
+        <svg
+          width={Math.round(size * 0.45)}
+          height={Math.round(size * 0.45)}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#00F2FE"
+          strokeWidth="2"
+          style={{ position: 'absolute' }}
+        >
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
+          <circle cx="12" cy="12" r="3" fill="#00F2FE" />
+        </svg>
         <img
-          src="/images/app_ai_icon.jpg"
+          src="/images/nexa_app_logo.jpg"
           alt="Great Minds AI"
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'relative', zIndex: 2 }}
         />
       </div>
     </div>

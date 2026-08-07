@@ -14,6 +14,7 @@ import { MessageInfoModal } from './MessageInfoModal';
 import { CachedAvatar } from './CachedAvatar';
 import { TelegramMessageBubble } from './TelegramMessageBubble';
 import { GreatMindsRing } from './GreatMindsRing';
+import { NexaSmartReplyDrawer } from './NexaSmartReplyDrawer';
 const defaultGreatMindsBg = '/images/greatminds_chat_bg.jpg';
 
 interface ChatPanelProps {
@@ -118,7 +119,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [showDisappearingModal, setShowDisappearingModal] = useState(false);
   const [showMoreModal, setShowMoreModal] = useState(false);
   const [showPinnedModal, setShowPinnedModal] = useState(false);
+  const [showPinnedBanner, setShowPinnedBanner] = useState(true);
+  const [showSmartReplyDrawer, setShowSmartReplyDrawer] = useState(false);
   const [infoMessage, setInfoMessage] = useState<ChatMessage | null>(null);
+
+  // Auto-hide pinned message banner 4 seconds after chat is opened
+  useEffect(() => {
+    setShowPinnedBanner(true);
+    const timer = setTimeout(() => {
+      setShowPinnedBanner(false);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [activeRoom?.id]);
 
   // Keyboard Shortcuts (Cmd+F / Ctrl+F for search, Esc for close)
   useEffect(() => {
@@ -204,14 +216,45 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
+  const [unreadCountFromScroll, setUnreadCountFromScroll] = useState(0);
+  const [recordingMode, setRecordingMode] = useState<'voice' | 'video'>('voice');
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+  const handleMessagesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    if (distanceFromBottom > 120) {
+      setShowScrollBottomBtn(true);
+    } else {
+      setShowScrollBottomBtn(false);
+      setUnreadCountFromScroll(0);
+    }
+  };
+
+  const handleApplyFormatting = (syntax: string) => {
+    if (!inputText) {
+      setInputText(`${syntax}${syntax}`);
+      return;
+    }
+    setInputText((prev) => `${syntax}${prev}${syntax}`);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setShowScrollBottomBtn(false);
+    setUnreadCountFromScroll(0);
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (!showScrollBottomBtn) {
+      scrollToBottom();
+    } else {
+      setUnreadCountFromScroll((prev) => prev + 1);
+    }
   }, [chatMessages.length, isTyping]);
 
   // Find latest pinned message
@@ -493,6 +536,35 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         />
       )}
 
+      {/* Great Minds AI Watermark Overlay */}
+      {isGreatMinds && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            zIndex: 1,
+            overflow: 'hidden',
+          }}
+        >
+          <img
+            src="/great-minds-logo.svg"
+            alt=""
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            style={{
+              width: 'min(380px, 70vw)',
+              height: 'min(380px, 70vw)',
+              opacity: 0.09,
+              filter: 'drop-shadow(0 0 20px rgba(0, 242, 254, 0.4))',
+              userSelect: 'none',
+            }}
+          />
+        </div>
+      )}
+
       {/* TOP HEADER */}
       <div className="panel-hdr" style={{ zIndex: 10 }}>
         <button
@@ -609,6 +681,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </svg>
           </button>
 
+          {pinnedMsg && (
+            <button
+              className="panel-hdr-ic"
+              title={showPinnedBanner ? 'Hide Pinned Banner' : 'Show Pinned Banner'}
+              onClick={() => setShowPinnedBanner(!showPinnedBanner)}
+              style={{
+                color: showPinnedBanner ? 'var(--accent-1, #00A884)' : 'var(--text-1)',
+                fontSize: '14px',
+              }}
+            >
+              📌
+            </button>
+          )}
+
           <button className="panel-hdr-ic" title="More Options" onClick={() => setShowMoreModal(true)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="5" r="1" />
@@ -619,8 +705,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         </div>
       </div>
 
-      {/* STICKY PINNED MESSAGE BANNER */}
-      {pinnedMsg && (
+      {/* STICKY PINNED MESSAGE BANNER - APPEARS FOR 4 SECONDS UPON CHAT OPEN */}
+      {pinnedMsg && showPinnedBanner && (
         <div className="tg-pinned-bar">
           <div
             className="tg-pinned-info"
@@ -667,13 +753,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </button>
 
             <button
-              onClick={() => {
-                const idx = chatMessages.findIndex((m) => m.id === pinnedMsg.id || (m.isPinned && m.text === pinnedMsg.text));
-                if (idx !== -1) {
-                  setChatMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, isPinned: false } : m)));
-                  onToast('Message unpinned');
-                }
-              }}
+              onClick={() => setShowPinnedBanner(false)}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -683,7 +763,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 padding: '4px 6px',
                 borderRadius: '4px',
               }}
-              title="Unpin message"
+              title="Close banner"
             >
               ✕
             </button>
@@ -785,7 +865,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )}
 
       {/* MESSAGES STREAM AREA */}
-      <div className="tg-messages-stream" style={{ zIndex: 2 }}>
+      <div
+        className="tg-messages-stream"
+        ref={messagesContainerRef}
+        onScroll={handleMessagesScroll}
+        style={{ zIndex: 2, position: 'relative' }}
+      >
         {chatMessages.map((msg, idx) => {
           const mine = msg.from === 'me';
           const prevMsg = chatMessages[idx - 1];
@@ -862,6 +947,57 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         )}
 
         <div ref={messagesEndRef} />
+
+        {/* FLOATING SCROLL TO BOTTOM BUTTON WITH UNREAD BADGE */}
+        {showScrollBottomBtn && (
+          <button
+            onClick={() => {
+              scrollToBottom();
+            }}
+            style={{
+              position: 'sticky',
+              bottom: '16px',
+              float: 'right',
+              marginRight: '12px',
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              backgroundColor: '#2b5278',
+              color: '#ffffff',
+              border: '1px solid rgba(255,255,255,0.15)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 90,
+              transition: 'transform 0.2s ease, opacity 0.2s ease',
+            }}
+            title="Scroll to bottom"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M12 5v14M19 12l-7 7-7-7" />
+            </svg>
+            {unreadCountFromScroll > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-6px',
+                  right: '-6px',
+                  backgroundColor: '#4d9ef6',
+                  color: '#ffffff',
+                  borderRadius: '10px',
+                  padding: '2px 6px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                }}
+              >
+                {unreadCountFromScroll}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* MULTI-SELECTION TOOLBAR */}
@@ -1093,11 +1229,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      fontSize: '14px',
                     }}
                     title="Cancel Recording"
                   >
-                    🗑️
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
                   </button>
 
                   <button
@@ -1152,6 +1290,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   </svg>
                 </button>
 
+                <button
+                  className="composer-ic-btn"
+                  title="Nexa AI Smart Reply (Gemini Assistant)"
+                  onClick={() => {
+                    setShowSmartReplyDrawer(true);
+                    setShowAttachMenu(false);
+                    setShowEmojiPicker(false);
+                  }}
+                  style={{ color: '#00F2FE' }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                  </svg>
+                </button>
+
                 {/* Contextual @Great Minds AI Mention Trigger */}
                 {(inputText.includes('@') || activeRoom?.id === 'greatminds_ai') && (
                   <div
@@ -1185,12 +1338,68 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   </div>
                 )}
 
+                {/* Formatting bar popup */}
+                {(isInputFocused || inputText.trim().length > 0) && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '66px',
+                      right: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'rgba(23, 33, 43, 0.95)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      borderRadius: '20px',
+                      padding: '4px 8px',
+                      boxShadow: '0 6px 20px rgba(0, 0, 0, 0.45)',
+                      zIndex: 80,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', color: '#a7b2bf', fontWeight: 800, fontSize: '13px', cursor: 'pointer', padding: '2px 8px', borderRadius: '12px' }}
+                      title="Bold (**text**)"
+                      onClick={() => handleApplyFormatting('**')}
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', color: '#a7b2bf', fontStyle: 'italic', fontWeight: 800, fontSize: '13px', cursor: 'pointer', padding: '2px 8px', borderRadius: '12px' }}
+                      title="Italic (*text*)"
+                      onClick={() => handleApplyFormatting('*')}
+                    >
+                      I
+                    </button>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', color: '#a7b2bf', textDecoration: 'line-through', fontWeight: 800, fontSize: '13px', cursor: 'pointer', padding: '2px 8px', borderRadius: '12px' }}
+                      title="Strikethrough (~~text~~)"
+                      onClick={() => handleApplyFormatting('~~')}
+                    >
+                      S
+                    </button>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', color: '#a7b2bf', fontFamily: 'monospace', fontWeight: 800, fontSize: '12px', cursor: 'pointer', padding: '2px 8px', borderRadius: '12px' }}
+                      title="Monospace (```code```)"
+                      onClick={() => handleApplyFormatting('```')}
+                    >
+                      M
+                    </button>
+                  </div>
+                )}
+
                 <input
                   type="text"
                   className="composer-input"
                   placeholder={editingIndex !== null ? 'Edit message...' : 'Write a message...'}
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
+                  onFocus={() => setIsInputFocused(true)}
+                  onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                   onKeyDown={handleKeyDown}
                   onPaste={(e) => {
                     if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
@@ -1265,7 +1474,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             { type: 'location', label: 'Location', ic: '📍' },
             { type: 'contact', label: 'Contact', ic: '👤' },
             { type: 'sketch', label: 'Drawing', ic: '🎨' },
-            { type: 'sticker', label: 'Sticker', ic: '✨' },
+            { type: 'ai_reply', label: 'AI Reply', ic: '🪄' },
             { type: 'zip', label: 'Zip Archive', ic: '📦' },
           ].map((item) => (
             <button
@@ -1284,6 +1493,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 fontSize: '12px',
               }}
               onClick={() => {
+                if (item.type === 'ai_reply') {
+                  setShowSmartReplyDrawer(true);
+                  setShowAttachMenu(false);
+                  return;
+                }
                 if (item.type === 'doc' || item.type === 'photo') {
                   fileInputRef.current?.click();
                 }
@@ -1437,6 +1651,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           isMuted={activeRoom.muted}
           disappearingTimer={activeRoom.disappearingTimer || 'Off'}
           messages={messages}
+          onOpenSearch={() => setShowSearchOverlay(true)}
           onClose={() => setShowMoreModal(false)}
           onOpenWallpaperModal={() => {
             setShowMoreModal(false);
@@ -1507,7 +1722,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {showDisappearingModal && (
         <DisappearingMessagesModal
-          currentTimer={activeRoom.disappearingTimer || 'Off'}
+          currentTimer={activeRoom?.disappearingTimer || 'Off'}
           onSelectTimer={(t) => {
             onSetDisappearingTimer?.(t);
             setShowDisappearingModal(false);
@@ -1546,6 +1761,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           onToast={onToast}
         />
       )}
+
+      {/* NEXA AI SMART REPLY DRAWER */}
+      <NexaSmartReplyDrawer
+        isOpen={showSmartReplyDrawer}
+        onClose={() => setShowSmartReplyDrawer(false)}
+        onSelectReply={(text) => {
+          setInputText(text);
+        }}
+        contextMessages={chatMessages.slice(-8).map((m) => ({
+          sender: m.from === 'me' ? 'Me' : m.name || activeRoom?.name || 'User',
+          text: m.text || (m.type === 'photo' ? '[Photo]' : m.type === 'voice' ? '[Voice Note]' : '[Attachment]'),
+        }))}
+        roomName={activeRoom?.name}
+        onToast={onToast}
+      />
     </div>
   );
 };

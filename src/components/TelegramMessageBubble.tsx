@@ -65,12 +65,12 @@ function extractFirstUrl(text?: string): string | null {
   return match ? match[0] : null;
 }
 
-// Simple text parser for bold, italic, code, URLs, mentions, and hashtags
+// Simple text parser for bold, italic, strikethrough, code, URLs, mentions, and hashtags
 function parseFormattedText(text: string) {
   if (!text) return null;
 
-  // Split by URLs, @mentions, #hashtags, markdown bold/italic
-  const tokenRegex = /(https?:\/\/[^\s]+|@[a-zA-Z0-9_]+|#[a-zA-Z0-9_]+|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+  // Split by URLs, @mentions, #hashtags, markdown bold/italic/strikethrough/code
+  const tokenRegex = /(https?:\/\/[^\s]+|@[a-zA-Z0-9_]+|#[a-zA-Z0-9_]+|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|```[^`]+```|`[^`]+`)/g;
   const parts = text.split(tokenRegex);
 
   return parts.map((part, idx) => {
@@ -113,6 +113,14 @@ function parseFormattedText(text: string) {
 
     if (part.startsWith('*') && part.endsWith('*')) {
       return <em key={idx}>{part.slice(1, -1)}</em>;
+    }
+
+    if (part.startsWith('~~') && part.endsWith('~~')) {
+      return <del key={idx}>{part.slice(2, -2)}</del>;
+    }
+
+    if (part.startsWith('```') && part.endsWith('```')) {
+      return <code key={idx} className="tg-inline-code">{part.slice(3, -3)}</code>;
     }
 
     if (part.startsWith('`') && part.endsWith('`')) {
@@ -339,17 +347,22 @@ export const TelegramMessageBubble: React.FC<TelegramMessageBubbleProps> = ({
                 onReply?.(message);
               }}
             >
-              ↩
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M9 14L4 9l5-5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M4 9h11a5 5 0 015 5v3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
             <button
               className="tg-hover-act-btn"
-              title="React ❤️"
+              title="React"
               onClick={(e) => {
                 e.stopPropagation();
-                onReact?.(msgIndex, '❤️');
+                onReact?.(msgIndex, '👍');
               }}
             >
-              ❤️
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+              </svg>
             </button>
             <button
               className={`tg-hover-act-btn ${message.isPinned ? 'is-active' : ''}`}
@@ -357,10 +370,13 @@ export const TelegramMessageBubble: React.FC<TelegramMessageBubbleProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 onPin?.(message, msgIndex);
-                onToast?.(message.isPinned ? 'Message unpinned' : 'Message pinned 📌');
+                onToast?.(message.isPinned ? 'Message unpinned' : 'Message pinned');
               }}
             >
-              📌
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="17" x2="12" y2="22" />
+                <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+              </svg>
             </button>
             <button
               className="tg-hover-act-btn"
@@ -370,7 +386,11 @@ export const TelegramMessageBubble: React.FC<TelegramMessageBubbleProps> = ({
                 onContextMenuOpen?.(e, msgIndex);
               }}
             >
-              ⋮
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="12" cy="5" r="1" />
+                <circle cx="12" cy="19" r="1" />
+              </svg>
             </button>
           </div>
         )}
@@ -513,6 +533,7 @@ export const TelegramMessageBubble: React.FC<TelegramMessageBubbleProps> = ({
                   alt={message.name || 'Photo'}
                   loading="lazy"
                   referrerPolicy="no-referrer"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
                   className="tg-photo-img"
                 />
               </div>

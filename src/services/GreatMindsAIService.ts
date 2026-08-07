@@ -120,3 +120,122 @@ export async function askGreatMindsAI(
     type: 'text',
   };
 }
+
+export interface SmartReplyResult {
+  mainReply: string;
+  options: string[];
+}
+
+export async function generateNexaSmartReplies(
+  contextMessages: { sender: string; text: string }[],
+  tone: string = 'friendly',
+  customPrompt?: string
+): Promise<SmartReplyResult> {
+  const historyText = contextMessages
+    .slice(-6)
+    .map((m) => `${m.sender}: ${m.text}`)
+    .join('\n');
+
+  const ai = getGenAI();
+  if (ai) {
+    try {
+      const prompt = `You are Nexa AI, a smart reply assistant inside Nexa Messaging. 
+Analyze the recent conversation:
+${historyText || 'User is starting a conversation'}
+
+${customPrompt ? `User guidance/custom instruction: "${customPrompt}"` : ''}
+Desired tone: ${tone.toUpperCase()}
+
+Respond strictly in valid JSON format with keys:
+"mainReply": a well-crafted, ready-to-send response matching the tone and context.
+"options": an array of 3 short quick-reply strings (1-6 words each) matching the tone.
+
+Do NOT include markdown formatting or extra text outside JSON.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: prompt,
+      });
+
+      if (response && response.text) {
+        try {
+          const cleanText = response.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+          const parsed = JSON.parse(cleanText);
+          if (parsed.mainReply && Array.isArray(parsed.options)) {
+            return {
+              mainReply: parsed.mainReply,
+              options: parsed.options,
+            };
+          }
+        } catch {
+          // If JSON parse failed, use response text as mainReply
+          return {
+            mainReply: response.text.trim(),
+            options: [
+              'Sounds good to me! 👍',
+              'Thanks for letting me know!',
+              'Can we catch up on this later? 🕒',
+            ],
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Gemini smart reply error, using intelligent fallback engine:', err);
+    }
+  }
+
+  // Fallback context & tone-based generation engine
+  const lastMsg = contextMessages.length > 0 ? contextMessages[contextMessages.length - 1].text.toLowerCase() : '';
+
+  let main = '';
+  let options: string[] = [];
+
+  if (tone === 'professional') {
+    if (lastMsg.includes('file') || lastMsg.includes('send') || lastMsg.includes('document')) {
+      main = 'Thank you for sharing the documentation. I will review it carefully and get back to you shortly.';
+      options = ['Received with thanks! 📂', 'I will review this today.', 'Could you confirm the deadline?'];
+    } else if (lastMsg.includes('meeting') || lastMsg.includes('time') || lastMsg.includes('schedule')) {
+      main = 'Thank you for reaching out regarding the schedule. Please let me know your preferred time slot, and I will confirm my availability.';
+      options = ['Checking my calendar 📅', 'Tomorrow afternoon works best.', 'Sent you an invite.'];
+    } else {
+      main = 'Thank you for your message. I acknowledge receipt and will follow up with complete details as soon as possible.';
+      options = ['Acknowledged, thank you.', 'I will keep you updated.', 'Let us touch base tomorrow.'];
+    }
+  } else if (tone === 'concise') {
+    if (lastMsg.includes('?')) {
+      main = 'Yes, that works! Let us proceed as discussed.';
+      options = ['Yes, absolutely! 👍', 'No problem.', 'Sounds good!'];
+    } else {
+      main = 'Got it, thanks for updating me!';
+      options = ['Got it! 👌', 'On it now ⚡', 'Will do!'];
+    }
+  } else if (tone === 'enthusiastic') {
+    main = 'That sounds absolutely amazing! 🎉 I am so excited for this, let us definitely make it happen!';
+    options = ['That is awesome! 🔥', 'Super excited! 🚀', 'Love this idea! ✨'];
+  } else if (tone === 'witty') {
+    main = 'You know I never say no to a good plan! Let us see how fast we can pull this off. 😏';
+    options = ['Challenge accepted! 🤠', 'Hold my coffee ☕', '10/10 execution incoming!'];
+  } else if (tone === 'empathetic') {
+    main = 'I completely understand where you are coming from. Take all the time you need, and let me know if there is anything I can do to help. 💙';
+    options = ['I am here for you 💙', 'Take your time 🙏', 'Sending good vibes ✨'];
+  } else {
+    // Friendly default
+    if (lastMsg.includes('hello') || lastMsg.includes('hi') || lastMsg.includes('hey')) {
+      main = 'Hey there! 😊 Hope you are having a fantastic day! How can I help you out today?';
+      options = ['Hey! How is it going? 👋', 'Hello! Good to hear from you!', 'Hey! All good here!'];
+    } else if (lastMsg.includes('thanks') || lastMsg.includes('thank you')) {
+      main = 'You are so welcome! Always happy to help! Let me know if you need anything else. 😊';
+      options = ['Anytime! 🙌', 'You got it! 👍', 'Happy to help! ✨'];
+    } else {
+      main = 'Thanks for the update! That sounds like a solid plan. Let me know if anything changes on your end!';
+      options = ['Sounds great! 👍', 'Will check and reply soon.', 'Thanks for letting me know! 😊'];
+    }
+  }
+
+  if (customPrompt) {
+    main = `[Nexa AI Draft based on "${customPrompt}"]: ${main}`;
+  }
+
+  return { mainReply: main, options };
+}
+

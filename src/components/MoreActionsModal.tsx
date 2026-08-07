@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Search, Bell, BellOff, Image, Folder, Timer, Share2, Pin, Trash2, AlertTriangle, Ban, LogOut, X } from 'lucide-react';
 import { ChatRoom, ChatMessage } from '../types';
 
 interface MoreActionsModalProps {
@@ -7,6 +8,7 @@ interface MoreActionsModalProps {
   isMuted?: boolean;
   disappearingTimer?: string;
   messages?: ChatMessage[];
+  onOpenSearch?: () => void;
   onReport?: () => void;
   onBlock?: () => void;
   onBlockUser?: () => void;
@@ -28,6 +30,7 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
   isMuted,
   disappearingTimer,
   messages = [],
+  onOpenSearch,
   onReport,
   onBlock,
   onBlockUser,
@@ -68,10 +71,10 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
         style={{
           width: '380px',
           maxWidth: '90vw',
-          background: 'var(--bg-1, #111b21)',
+          background: '#1f2c38',
           borderRadius: '16px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.6)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.65)',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
@@ -87,35 +90,242 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                background: 'var(--bg-2, #202c33)',
+                background: '#17212b',
               }}
             >
-              <div style={{ fontSize: '16px', fontWeight: 700 }}>More Actions • {displayName}</div>
-              <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>Options • {displayName}</div>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#a7b2bf', fontSize: '18px', cursor: 'pointer' }}>
                 ✕
               </button>
             </div>
 
-            <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '70vh', overflowY: 'auto' }}>
+              {/* Search in chat */}
+              {onOpenSearch && (
+                <button
+                  onClick={() => {
+                    onOpenSearch();
+                    onClose();
+                  }}
+                  style={{
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#e9edf0',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                >
+                  <Search size={18} color="#8774e1" /> Search in Chat
+                </button>
+              )}
+
+              {/* Mute Notifications */}
+              {onOpenMuteModal && (
+                <button
+                  onClick={() => {
+                    onOpenMuteModal();
+                    onClose();
+                  }}
+                  style={{
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#e9edf0',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {isMuted ? <Bell size={18} color="#8774e1" /> : <BellOff size={18} color="#8774e1" />}
+                    <span>{isMuted ? 'Unmute Notifications' : 'Mute Notifications'}</span>
+                  </div>
+                  {isMuted && <span style={{ fontSize: '12px', color: '#8774e1', fontWeight: 600 }}>Muted</span>}
+                </button>
+              )}
+
+              {/* Chat Wallpaper / Theme */}
+              {onOpenWallpaperModal && (
+                <button
+                  onClick={() => {
+                    onOpenWallpaperModal();
+                    onClose();
+                  }}
+                  style={{
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#e9edf0',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                >
+                  <Image size={18} color="#8774e1" /> Change Wallpaper
+                </button>
+              )}
+
+              {/* Shared Media */}
+              {onOpenSharedMediaModal && (
+                <button
+                  onClick={() => {
+                    onOpenSharedMediaModal();
+                    onClose();
+                  }}
+                  style={{
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#e9edf0',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                >
+                  <Folder size={18} color="#8774e1" /> Shared Media & Files
+                </button>
+              )}
+
+              {/* Auto-Delete Messages */}
+              {onOpenDisappearingModal && (
+                <button
+                  onClick={() => {
+                    onOpenDisappearingModal();
+                    onClose();
+                  }}
+                  style={{
+                    padding: '11px 14px',
+                    borderRadius: '10px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#e9edf0',
+                    textAlign: 'left',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Timer size={18} color="#8774e1" />
+                    <span>Auto-Delete Timer</span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#a7b2bf' }}>{disappearingTimer}</span>
+                </button>
+              )}
+
+              {/* Export Chat */}
+              <button
+                onClick={() => {
+                  onExportChat?.();
+                  onClose();
+                }}
+                style={{
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#e9edf0',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <Share2 size={18} color="#8774e1" /> Export Chat History
+              </button>
+
+              {/* Add Shortcut */}
+              <button
+                onClick={() => {
+                  onAddShortcut?.();
+                  onClose();
+                }}
+                style={{
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#e9edf0',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <Pin size={18} color="#8774e1" /> Add to Home Screen
+              </button>
+
+              {/* Clear Chat */}
+              <button
+                onClick={() => setActivePrompt('clear')}
+                style={{
+                  padding: '11px 14px',
+                  borderRadius: '10px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#e9edf0',
+                  textAlign: 'left',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                }}
+              >
+                <Trash2 size={18} color="#8774e1" /> Clear Chat
+              </button>
+
               {/* Report */}
               <button
                 onClick={() => setActivePrompt('report')}
                 style={{
-                  padding: '12px 14px',
+                  padding: '11px 14px',
                   borderRadius: '10px',
                   background: 'transparent',
                   border: 'none',
-                  color: '#FF5376',
+                  color: '#FF5C5C',
                   textAlign: 'left',
                   fontSize: '14px',
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
+                  gap: '12px',
                 }}
               >
-                <span>⚠️</span> Report {isGroup ? 'Group' : 'Contact'}
+                <AlertTriangle size={18} color="#FF5C5C" /> Report {isGroup ? 'Group' : 'Contact'}
               </button>
 
               {/* Block (1-on-1) or Exit Group (Group) */}
@@ -123,21 +333,21 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
                 <button
                   onClick={() => setActivePrompt('block')}
                   style={{
-                    padding: '12px 14px',
+                    padding: '11px 14px',
                     borderRadius: '10px',
                     background: 'transparent',
                     border: 'none',
-                    color: '#FF5376',
+                    color: '#FF5C5C',
                     textAlign: 'left',
                     fontSize: '14px',
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '10px',
+                    gap: '12px',
                   }}
                 >
-                  <span>🚫</span> Block {displayName}
+                  <Ban size={18} color="#FF5C5C" /> Block {displayName}
                 </button>
               )}
 
@@ -145,92 +355,23 @@ export const MoreActionsModal: React.FC<MoreActionsModalProps> = ({
                 <button
                   onClick={() => setActivePrompt('exit')}
                   style={{
-                    padding: '12px 14px',
+                    padding: '11px 14px',
                     borderRadius: '10px',
                     background: 'transparent',
                     border: 'none',
-                    color: '#FF5376',
+                    color: '#FF5C5C',
                     textAlign: 'left',
                     fontSize: '14px',
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '10px',
+                    gap: '12px',
                   }}
                 >
-                  <span>🚪</span> Exit Group
+                  <LogOut size={18} color="#FF5C5C" /> Exit Group
                 </button>
               )}
-
-              {/* Clear chat */}
-              <button
-                onClick={() => setActivePrompt('clear')}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span>🧹</span> Clear Chat
-              </button>
-
-              {/* Export chat */}
-              <button
-                onClick={() => {
-                  onExportChat?.();
-                  onClose();
-                }}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span>📤</span> Export Chat
-              </button>
-
-              {/* Add shortcut */}
-              <button
-                onClick={() => {
-                  onAddShortcut?.();
-                  onClose();
-                }}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#fff',
-                  textAlign: 'left',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <span>📌</span> Add Shortcut
-              </button>
             </div>
           </>
         )}

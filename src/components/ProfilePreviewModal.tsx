@@ -7,18 +7,28 @@ function initials(name: string): string {
   return name.split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 }
 
-function renderAvatar(avatarStr?: string, nameStr?: string) {
-  if (avatarStr && (avatarStr.startsWith('http') || avatarStr.startsWith('data:'))) {
+function SafeAvatarImage({ avatarStr, nameStr }: { avatarStr?: string; nameStr?: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (avatarStr && (avatarStr.startsWith('http') || avatarStr.startsWith('data:')) && !hasError) {
     return (
       <img
         src={avatarStr}
         alt={nameStr || 'Avatar'}
         referrerPolicy="no-referrer"
+        onError={(e) => {
+          setHasError(true);
+          e.currentTarget.style.display = 'none';
+        }}
         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
     );
   }
-  return initials(nameStr || '');
+  return <span style={{ textTransform: 'uppercase', fontSize: '13px', fontWeight: 700 }}>{initials(nameStr || '')}</span>;
+}
+
+function renderAvatar(avatarStr?: string, nameStr?: string) {
+  return <SafeAvatarImage avatarStr={avatarStr} nameStr={nameStr} />;
 }
 
 export interface ProfilePreviewTarget {
